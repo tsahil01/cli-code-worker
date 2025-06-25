@@ -1,0 +1,32 @@
+{
+  "name": "cli-code-worker",
+  "version": "1.0.0",
+  "description": "A powerful worker machine which handles llm interaction with the cli.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc -b && node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsahil01/cli-code-worker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tsahil01/cli-code-worker/issues"
+  },
+  "homepage": "https://github.com/tsahil01/cli-code-worker#readme",
+  "dependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/dotenv": "^6.1.1",
+    "@types/express": "^5.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "zod": "^3.25.67"
+  }
+}
