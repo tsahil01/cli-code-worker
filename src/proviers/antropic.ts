@@ -1,20 +1,21 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Message } from "@anthropic-ai/sdk/resources/messages";
+import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { anthropicTools } from "../context/tools";
 import { SYSTEM_PROMPT } from "../context/prompts";
+import { anthropicAPIKey } from "..";
 
 const anthropicClient = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
+    apiKey: anthropicAPIKey,
 });
 
-export async function anthropicChat(messages: Message[], model: string, max_tokens: number, thinking: boolean) {
+export async function anthropicChat(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean) {
     const response = await anthropicClient.messages.create({
         model,
         max_tokens,
         ...(thinking && {
             thinking: {
                 type: "enabled",
-                budget_tokens: thinking ? 1000 : 0,
+                budget_tokens: thinking ? 1025 : 0,
             }
         }),
         system: [{
@@ -28,17 +29,20 @@ export async function anthropicChat(messages: Message[], model: string, max_toke
         messages: messages,
     });
 
-    // Extract thinking blocks and regular content
     const thinkingBlocks = response.content.filter(block => block.type === "thinking");
     const regularContent = response.content.filter(block => block.type !== "thinking");
     const toolCalls = response.content.filter(block => block.type === "tool_use");
+    const finishReason = response.stop_reason;
+    const usageMetadata = response.usage;
 
     return {
         ...response,
         thinking: thinkingBlocks,
         content: regularContent,
-        // Helper methods to access thinking
+        toolCalls: toolCalls,
         getThinking: () => thinkingBlocks.map(block => 'content' in block ? block.content : '').join('\n'),
-        hasThinking: () => thinkingBlocks.length > 0
+        hasThinking: () => thinkingBlocks.length > 0,
+        finishReason: finishReason,
+        usageMetadata: usageMetadata,
     };
 }
