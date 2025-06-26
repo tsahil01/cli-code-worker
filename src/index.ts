@@ -2,9 +2,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import router from "./routes";
+dotenv.config();
 
-dotenv.config({path: ".env"});
 const PORT = process.env.PORT || 3000;
+export const anthropicAPIKey = process.env.ANTHROPIC_API_KEY;
+export const openAIAPIKey = process.env.OPENAI_API_KEY;
+export const geminiAPIKey = process.env.GEMINI_API_KEY;
 
 const app = express();
 
