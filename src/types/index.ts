@@ -30,3 +30,14 @@ export interface UserData {
     tokenId: string;
     subscriptions: Subscription[];
 }
+
+export interface ModelCapabilities {
+    modelName: string;
+    provider: string;
+    displayName: string;
+    maxTokens: number;
+    thinking: boolean;
+    minThinkingTokens?: number;
+    maxThinkingTokens?: number;
+    createdAt: string;
+}

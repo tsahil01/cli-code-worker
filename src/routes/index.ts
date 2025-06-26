@@ -1,11 +1,17 @@
 import { Router } from "express";
 import { chatValidation, UserData } from "../types";
 import { verifyUser } from "../lib/auth";
+import { anthropicModels, openaiModels, geminiModels } from "../lib/models";
 
 const router = Router();
 
 router.get("/", (req, res) => {
     res.send("Hello World");
+});
+
+router.get("/models", async (req, res) => {
+    const models = [...anthropicModels, ...openaiModels, ...geminiModels];
+    res.status(200).json({ models });
 });
 
 router.post("/chat", async (req, res) => {
