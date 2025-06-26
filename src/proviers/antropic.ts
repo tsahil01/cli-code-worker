@@ -4,11 +4,12 @@ import { anthropicTools } from "../context/tools";
 import { SYSTEM_PROMPT } from "../context/prompts";
 import { anthropicAPIKey } from "..";
 
-const anthropicClient = new Anthropic({
-    apiKey: anthropicAPIKey,
-});
 
 export async function anthropicChat(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean) {
+    const anthropicClient = new Anthropic({
+        apiKey: anthropicAPIKey,
+    });
+
     const response = await anthropicClient.messages.create({
         model,
         max_tokens,
@@ -45,4 +46,91 @@ export async function anthropicChat(messages: MessageParam[], model: string, max
         finishReason: finishReason,
         usageMetadata: usageMetadata,
     };
+}
+
+
+
+export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, callback: (event: any) => void) {
+    console.log('Streaming started');
+    const anthropicClient = new Anthropic({
+        apiKey: anthropicAPIKey,
+    });
+
+    try {
+        const stream = await anthropicClient.messages.stream({
+            model,
+            max_tokens,
+            ...(thinking && {
+                thinking: {
+                    type: "enabled",
+                    budget_tokens: thinking ? 1025 : 0,
+                }
+            }),
+            system: [{
+                type: "text",
+                text: SYSTEM_PROMPT,
+                cache_control: {
+                    type: "ephemeral"
+                }
+            }],
+            tools: anthropicTools,
+            messages: messages,
+        });
+
+        let thinkingBlocks: any[] = [];
+        let regularContent: any[] = [];
+        let toolCalls: any[] = [];
+        let finishReason: string | null = null;
+        let usageMetadata: any = null;
+        let fullMessage: any = null;
+
+        stream.on('message', (message) => {
+            fullMessage = message;
+            finishReason = message.stop_reason;
+            usageMetadata = message.usage;
+        });
+
+        stream.on('contentBlock', (contentBlock) => {
+            if (contentBlock.type === "thinking") {
+                thinkingBlocks.push(contentBlock);
+                callback({
+                    type: 'thinking',
+                    content: 'content' in contentBlock ? contentBlock.content : '',
+                    block: contentBlock
+                });
+            } else if (contentBlock.type === "tool_use") {
+                toolCalls.push(contentBlock);
+                callback({
+                    type: 'tool_call',
+                    toolCall: contentBlock
+                });
+            } else if (contentBlock.type === "text") {
+                regularContent.push(contentBlock);
+                callback({
+                    type: 'content',
+                    content: 'text' in contentBlock ? contentBlock.text : '',
+                    block: contentBlock
+                });
+            }
+        });
+
+        await stream.finalMessage();
+
+        callback({
+            type: 'final',
+            finishReason,
+            usageMetadata,
+            fullMessage,
+            summary: {
+                thinking: thinkingBlocks.map(block => 'content' in block ? block.content : '').join('\n'),
+                hasThinking: thinkingBlocks.length > 0,
+                toolCalls,
+                content: regularContent
+            }
+        });
+
+    } catch (error) {
+        console.error('Streaming error:', error);
+        throw error;
+    }
 }
