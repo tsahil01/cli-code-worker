@@ -1,7 +1,9 @@
+import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import { Content } from "@google/genai";
 import { z } from "zod";
 
 export const msgSchema = z.object({
-    role: z.enum(["user", "assistant", "system"]),
+    role: z.enum(["user", "assistant"]),
     content: z.any(),
 })
 export const chatSchema = z.object({
@@ -42,3 +44,7 @@ export interface ModelCapabilities {
     maxThinkingTokens?: number;
     createdAt?: string;
 }
+
+export interface GeminiInput extends Content {};
+
+export interface AnthropicInput extends MessageParam {}
