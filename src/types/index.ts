@@ -35,9 +35,10 @@ export interface ModelCapabilities {
     modelName: string;
     provider: string;
     displayName: string;
-    maxTokens: number;
+    maxInputTokens: number; // maximum input tokens (context window)
+    maxOutputTokens: number; // maximum output tokens
     thinking: boolean;
     minThinkingTokens?: number;
     maxThinkingTokens?: number;
-    createdAt: string;
+    createdAt?: string;
 }
