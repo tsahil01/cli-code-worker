@@ -3,13 +3,30 @@ import { anthropicTools } from "../context/tools";
 import { SYSTEM_PROMPT } from "../context/prompts";
 import { geminiAPIKey } from "../index";
 
+// Function to map roles to Gemini-compatible roles
+function mapToGeminiRole(role: string): string {
+    switch (role) {
+        case 'assistant':
+            return 'model';
+        case 'user':
+            return 'user';
+        default:
+            return 'user';
+    }
+}
 
 export async function geminiChat(messages: Content[], model: string, max_tokens: number, thinking: boolean) {
     const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
 
+    // Map roles to Gemini-compatible roles
+    const mappedMessages = messages.map(msg => ({
+        ...msg,
+        role: mapToGeminiRole(msg.role as string)
+    }));
+
     const response = await geminiClient.models.generateContent({
         model,
-        contents: messages,
+        contents: mappedMessages,
         config: {
             systemInstruction: SYSTEM_PROMPT,
             maxOutputTokens: max_tokens,
@@ -52,13 +69,19 @@ export async function geminiChat(messages: Content[], model: string, max_tokens:
 }
 
 export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, callback: (event: any) => void) {
-    console.log('Gemini streaming started');
+    console.log("MSFSS", JSON.stringify(messages))
     const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
 
     try {
+        // Map roles to Gemini-compatible roles
+        const mappedMessages = messages.map(msg => ({
+            ...msg,
+            role: mapToGeminiRole(msg.role as string)
+        }));
+
         const stream = await geminiClient.models.generateContentStream({
             model,
-            contents: messages,
+            contents: mappedMessages,
             config: {
                 systemInstruction: SYSTEM_PROMPT,
                 maxOutputTokens: max_tokens,
@@ -101,7 +124,6 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
                         toolCalls.push(part);
                         callback({
                             type: 'tool_call',
-                            toolCall: part
                         });
                     } else if (part.text) {
                         // Regular text content
