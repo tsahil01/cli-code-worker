@@ -265,62 +265,51 @@ export const anthropicTools: ToolUnion[] = [{
     }
 }, {
     name: "propose_change_vscode",
-    description: "Proposes a code change with inline diff preview in VSCode.",
+    description: "Proposes a code change with inline diff preview in VSCode. Uses a structured changes array where each change specifies the line range (1-based, inclusive) and content to replace.",
     input_schema: {
         type: "object",
         properties: {
             title: {
-                type: "string",
-                description: "Title of the change proposal"
-            },
-            description: {
-                type: "string",
-                description: "Description of the changes"
+                "type": "string",
+                "description": "Title of the change proposal (shown in diff dialog)"
             },
             filePath: {
                 type: "string",
                 description: "Path to the file to be modified"
             },
-            originalContent: {
-                type: "string",
-                description: "Original content being replaced"
-            },
-            proposedContent: {
-                type: "string",
-                description: "New content to replace with"
-            },
-            startLine: {
-                type: "number",
-                description: "Starting line number of the change (1-based)"
-            },
-            endLine: {
-                type: "number",
-                description: "Ending line number of the change (1-based)"
-            },
             changes: {
                 type: "array",
-                description: "Optional array of multiple changes",
+                description: "Array of changes to apply to the file",
                 items: {
                     type: "object",
                     properties: {
                         startLine: {
                             type: "number",
-                            description: "Starting line number (1-based)"
+                            description: "Starting line number (1-based, inclusive). Line 1 is the first line of the file."
                         },
                         endLine: {
                             type: "number",
-                            description: "Ending line number (1-based)"
+                            description: "Ending line number (1-based, inclusive). For single line changes, use the same number as startLine."
+                        },
+                        originalContent: {
+                            type: "string",
+                            description: "Original content being replaced (for documentation/verification)"
                         },
                         proposedContent: {
                             type: "string",
-                            description: "New content for this change"
+                            description: "New content to replace the original content with"
+                        },
+                        description: {
+                            type: "string",
+                            description: "Optional description of this specific change"
                         }
                     },
-                    required: ["startLine", "endLine", "proposedContent"]
-                }
+                    required: ["startLine", "endLine", "originalContent", "proposedContent"]
+                },
+                minItems: 1
             }
         },
-        required: ["title", "description", "filePath"]
+        "required": ["title", "filePath", "changes"]
     }
 }, {
     name: "get_active_file",
