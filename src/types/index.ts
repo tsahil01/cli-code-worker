@@ -8,7 +8,7 @@ export const msgSchema = z.object({
 })
 export const chatSchema = z.object({
     messages: z.array(msgSchema),
-    provider: z.enum(["openai", "anthropic", "gemini"]),
+    provider: z.enum(["openai", "anthropic", "gemini", "other"]),
     base_url: z.string().url().optional(),
     model: z.string(),
     temperature: z.number().min(0).max(1).optional(),
@@ -48,3 +48,8 @@ export interface ModelCapabilities {
 export interface GeminiInput extends Content {};
 
 export interface AnthropicInput extends MessageParam {}
+
+export interface OpenAIInput {
+    role: "user" | "assistant" | "system";
+    content: string;
+}

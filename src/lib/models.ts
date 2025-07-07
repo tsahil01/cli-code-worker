@@ -151,3 +151,14 @@ export const geminiModels: ModelCapabilities[] = [{
     maxOutputTokens: 8192,
     thinking: false,
 }];
+
+export const otherModels: ModelCapabilities[] = [{
+    modelName: "openrouter/cypher-alpha:free",
+    provider: "other",
+    displayName: "Cypher Alpha",
+    maxInputTokens: 1048576,
+    maxOutputTokens: 65536,
+    thinking: true,
+    minThinkingTokens: 128,
+    maxThinkingTokens: 32768,
+}];
