@@ -264,49 +264,41 @@ export const anthropicTools: ToolUnion[] = [{
         required: ["message"]
     }
 }, {
-    name: "propose_change_vscode",
-    description: "Proposes a code change with inline diff preview in VSCode. Uses a structured changes array where each change specifies the line range (1-based, inclusive) and content to replace.",
-    input_schema: {
-        type: "object",
-        properties: {
-            title: {
+    "name": "propose_change_vscode",
+    "description": "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "title": {
                 "type": "string",
                 "description": "Title of the change proposal (shown in diff dialog)"
             },
-            filePath: {
-                type: "string",
-                description: "Path to the file to be modified"
+            "filePath": {
+                "type": "string",
+                "description": "Path to the file to be modified"
             },
-            changes: {
-                type: "array",
-                description: "Array of changes to apply to the file",
-                items: {
-                    type: "object",
-                    properties: {
-                        startLine: {
-                            type: "number",
-                            description: "Starting line number (1-based, inclusive). Line 1 is the first line of the file."
+            "changes": {
+                "type": "array",
+                "description": "Array of content-based changes to apply",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "originalContent": {
+                            "type": "string",
+                            "description": "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
                         },
-                        endLine: {
-                            type: "number",
-                            description: "Ending line number (1-based, inclusive). For single line changes, use the same number as startLine."
+                        "proposedContent": {
+                            "type": "string",
+                            "description": "New content to replace the original content with"
                         },
-                        originalContent: {
-                            type: "string",
-                            description: "Original content being replaced (for documentation/verification)"
-                        },
-                        proposedContent: {
-                            type: "string",
-                            description: "New content to replace the original content with"
-                        },
-                        description: {
-                            type: "string",
-                            description: "Optional description of this specific change"
+                        "description": {
+                            "type": "string",
+                            "description": "Optional description of this specific change"
                         }
                     },
-                    required: ["startLine", "endLine", "originalContent", "proposedContent"]
+                    "required": ["originalContent", "proposedContent"]
                 },
-                minItems: 1
+                "minItems": 1
             }
         },
         "required": ["title", "filePath", "changes"]
