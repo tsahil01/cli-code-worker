@@ -161,4 +161,13 @@ export const otherModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 128,
     maxThinkingTokens: 32768,
+}, {
+    modelName: "mistralai/mistral-small-3.2-24b-instruct:free",
+    provider: "other",
+    displayName: "Mistral Small 3.2",
+    maxInputTokens: 1048576,
+    maxOutputTokens: 65536,
+    thinking: true,
+    minThinkingTokens: 128,
+    maxThinkingTokens: 32768,
 }];

@@ -1,55 +1,188 @@
 import OpenAI from "openai";
-import { Message } from "openai/resources/beta/threads/messages";
+import { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
+import { anthropicTools } from "../context/tools";
+import { SYSTEM_PROMPT } from "../context/prompts";
+import { openAIAPIKey } from "../index";
 
-const openaiClient = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Convert Anthropic tools to OpenAI format
+function convertToolsToOpenAI(): ChatCompletionTool[] {
+    return anthropicTools.map(tool => ({
+        type: "function" as const,
+        function: {
+            name: (tool as any).name,
+            description: (tool as any).description,
+            parameters: (tool as any).input_schema
+        }
+    }));
+}
 
-export async function openaiChat(messages: Message[], model: string, max_tokens: number, thinking: boolean) {
+export async function openaiChat(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinking: boolean, baseUrl?: string) {
+    const apiKey = openAIAPIKey || "any_other_key";
+    
+    const openaiClient = new OpenAI({
+        apiKey: apiKey,
+        ...(baseUrl && { baseURL: baseUrl })
+    });
+
+    const systemMessage: ChatCompletionMessageParam = {
+        role: "system",
+        content: SYSTEM_PROMPT
+    };
+
+    const allMessages = [systemMessage, ...messages];
+
+    const response = await openaiClient.chat.completions.create({
+        model,
+        messages: allMessages,
+        max_tokens,
+        tools: convertToolsToOpenAI(),
+        tool_choice: "auto"
+    });
+
+    const choice = response.choices[0];
+    const message = choice.message;
+    const finishReason = choice.finish_reason;
+    const usageMetadata = response.usage;
+
+    // Extract content and tool calls
+    const content = message.content ? [{ type: "text" as const, text: message.content }] : [];
+    const toolCalls = message.tool_calls || [];
+    
+    // OpenAI doesn't have separate thinking/reasoning in the response structure
+    // For o3 models, reasoning would be part of the content
+    const thinkingBlocks: any[] = [];
+
+    return {
+        thinking: thinkingBlocks,
+        content: content,
+        toolCalls: toolCalls,
+        getThinking: () => '',
+        hasThinking: () => false,
+        finishReason: finishReason,
+        usageMetadata: usageMetadata,
+        rawResponse: response
+    };
+}
+
+export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, callback: (event: any) => void, baseUrl?: string) {
+    const apiKey = openAIAPIKey || "any_other_key";
+    
+    const openaiClient = new OpenAI({
+        apiKey: apiKey,
+        ...(baseUrl && { baseURL: baseUrl })
+    });
+
+    const systemMessage: ChatCompletionMessageParam = {
+        role: "system",
+        content: SYSTEM_PROMPT
+    };
+
+    const allMessages = [systemMessage, ...messages];
+
     try {
-        const response = await openaiClient.responses.create({
+        const stream = await openaiClient.chat.completions.create({
             model,
-            input: messages,
-            max_output_tokens: max_tokens,
-            ...(thinking && {
-                thinking: {
-                    type: "enabled",
-                    budget_tokens: 1000,
-                }
-            }),
-            text: { format: { type: "json_object" } }
+            messages: allMessages,
+            max_tokens,
+            tools: convertToolsToOpenAI(),
+            tool_choice: "auto",
+            stream: true
         });
 
-        // Check if the conversation was too long for the context window, resulting in incomplete JSON 
-        if (response.status === "incomplete" && response.incomplete_details?.reason === "max_output_tokens") {
-            // your code should handle this error case
-        }
+        let content: any[] = [];
+        let toolCalls: any[] = [];
+        let thinkingBlocks: any[] = [];
+        let finishReason: string | null = null;
+        let usageMetadata: any = null;
+        let currentContent = '';
+        let currentToolCall: any = null;
+        let toolCallsMap = new Map();
 
-        // Check if the OpenAI safety system refused the request and generated a refusal instead
-        const firstOutput = response.output[0];
-        if (firstOutput.type === "message" && firstOutput.content?.[0]?.type === "refusal") {
-            // your code should handle this error case
-            // In this case, the .content field will contain the explanation (if any) that the model generated for why it is refusing
-        }
+        for await (const chunk of stream) {
+            const choice = chunk.choices[0];
+            if (!choice) continue;
 
-        // Check if the model's output included restricted content, so the generation of JSON was halted and may be partial
-        if (response.status === "incomplete" && response.incomplete_details?.reason === "content_filter") {
-            // your code should handle this error case
-        }
+            const delta = choice.delta;
 
-        if (response.status === "completed") {
-            // In this case the model has either successfully finished generating the JSON object according to your schema, or the model generated one of the tokens you provided as a "stop token"
+            // Handle regular content
+            if (delta.content) {
+                currentContent += delta.content;
+                content.push({ type: 'text', text: delta.content });
+                callback({
+                    type: 'content',
+                    content: delta.content,
+                    block: { type: 'text', text: currentContent }
+                });
+            }
 
-            if (true) { // No stop tokens specified
-                // If you didn't specify any stop tokens, then the generation is complete and the content key will contain the serialized JSON object
-                // This will parse successfully and should now contain  {"winner": "Los Angeles Dodgers"}
-                console.log(JSON.parse(response.output_text))
-            } else {
-                // Check if the response.output_text ends with one of your stop tokens and handle appropriately
+            // Handle tool calls
+            if (delta.tool_calls) {
+                for (const toolCall of delta.tool_calls) {
+                    if (toolCall.index !== undefined) {
+                        const index = toolCall.index;
+                        
+                        if (!toolCallsMap.has(index)) {
+                            toolCallsMap.set(index, {
+                                index: index,
+                                id: toolCall.id || '',
+                                type: 'function',
+                                function: {
+                                    name: '',
+                                    arguments: ''
+                                }
+                            });
+                        }
+
+                        const existingToolCall = toolCallsMap.get(index);
+
+                        if (toolCall.id) {
+                            existingToolCall.id = toolCall.id;
+                        }
+                        
+                        if (toolCall.function?.name) {
+                            existingToolCall.function.name += toolCall.function.name;
+                        }
+                        
+                        if (toolCall.function?.arguments) {
+                            existingToolCall.function.arguments += toolCall.function.arguments;
+                        }
+                    }
+                }
+
+                callback({
+                    type: 'tool_call'
+                });
+            }
+
+            // Handle finish reason
+            if (choice.finish_reason) {
+                finishReason = choice.finish_reason;
+            }
+
+            // Handle usage (usually comes at the end)
+            if (chunk.usage) {
+                usageMetadata = chunk.usage;
             }
         }
-    } catch (e) {
-        // Your code should handle errors here, for example a network error calling the API
-        console.error(e)
+
+        // Convert tool calls map to array
+        toolCalls = Array.from(toolCallsMap.values());
+
+        // Send final summary
+        callback({
+            type: 'final',
+            finishReason,
+            usageMetadata,
+            summary: {
+                thinking: '',
+                hasThinking: false,
+                toolCalls,
+                content: content
+            }
+        });
+
+    } catch (error) {
+        console.error('OpenAI streaming error:', error);
+        throw error;
     }
 }
