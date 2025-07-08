@@ -85,6 +85,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
             config: {
                 systemInstruction: SYSTEM_PROMPT,
                 maxOutputTokens: max_tokens,
+                temperature: 0.7,
                 ...(thinking && {
                     thinkingConfig: {
                         thinkingBudget: 1000,
