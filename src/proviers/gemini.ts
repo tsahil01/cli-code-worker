@@ -1,7 +1,11 @@
 import { GoogleGenAI, Content, Part } from "@google/genai";
 import { anthropicTools } from "../context/tools";
-import { SYSTEM_PROMPT } from "../context/prompts";
 import { geminiAPIKey } from "../index";
+import { planSchema } from "../types";
+import { z } from "zod";
+import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
+import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
+import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
 
 // Function to map roles to Gemini-compatible roles
 function mapToGeminiRole(role: string): string {
@@ -15,10 +19,10 @@ function mapToGeminiRole(role: string): string {
     }
 }
 
-export async function geminiChat(messages: Content[], model: string, max_tokens: number, thinking: boolean) {
+export async function geminiChat(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>) {
     const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
+    const addOns = addOnesConfig(plan);
 
-    // Map roles to Gemini-compatible roles
     const mappedMessages = messages.map(msg => ({
         ...msg,
         role: mapToGeminiRole(msg.role as string)
@@ -28,7 +32,7 @@ export async function geminiChat(messages: Content[], model: string, max_tokens:
         model,
         contents: mappedMessages,
         config: {
-            systemInstruction: SYSTEM_PROMPT,
+            systemInstruction: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT,
             maxOutputTokens: max_tokens,
             ...(thinking && {
                 thinkingConfig: {
@@ -68,10 +72,10 @@ export async function geminiChat(messages: Content[], model: string, max_tokens:
     };
 }
 
-export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, callback: (event: any) => void) {
+export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
     console.log("MSFSS", JSON.stringify(messages))
     const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
-
+    const addOns = addOnesConfig(plan); 
     try {
         // Map roles to Gemini-compatible roles
         const mappedMessages = messages.map(msg => ({
@@ -83,7 +87,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
             model,
             contents: mappedMessages,
             config: {
-                systemInstruction: SYSTEM_PROMPT,
+                systemInstruction: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) :  SYSTEM_PROMPT,
                 maxOutputTokens: max_tokens,
                 temperature: 0.7,
                 ...(thinking && {

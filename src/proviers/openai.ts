@@ -1,8 +1,12 @@
 import OpenAI from "openai";
 import { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { anthropicTools } from "../context/tools";
-import { SYSTEM_PROMPT } from "../context/prompts";
 import { openAIAPIKey } from "../index";
+import { planSchema } from "../types";
+import { z } from "zod";
+import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
+import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
+import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 
 // Convert Anthropic tools to OpenAI format
 function convertToolsToOpenAI(): ChatCompletionTool[] {
@@ -16,9 +20,9 @@ function convertToolsToOpenAI(): ChatCompletionTool[] {
     }));
 }
 
-export async function openaiChat(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinking: boolean, baseUrl?: string) {
+export async function openaiChat(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, baseUrl?: string) {
     const apiKey = openAIAPIKey || "any_other_key";
-    
+    const addOns = addOnesConfig(plan);
     const openaiClient = new OpenAI({
         apiKey: apiKey,
         ...(baseUrl && { baseURL: baseUrl })
@@ -26,7 +30,7 @@ export async function openaiChat(messages: ChatCompletionMessageParam[], model: 
 
     const systemMessage: ChatCompletionMessageParam = {
         role: "system",
-        content: SYSTEM_PROMPT
+        content: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT
     };
 
     const allMessages = [systemMessage, ...messages];
@@ -64,9 +68,9 @@ export async function openaiChat(messages: ChatCompletionMessageParam[], model: 
     };
 }
 
-export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, callback: (event: any) => void, baseUrl?: string) {
+export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, plan: z.infer<typeof planSchema>,   callback: (event: any) => void, baseUrl?: string) {
     const apiKey = openAIAPIKey || "any_other_key";
-    
+    const    addOns = addOnesConfig(plan);
     const openaiClient = new OpenAI({
         apiKey: apiKey,
         ...(baseUrl && { baseURL: baseUrl })
@@ -74,7 +78,7 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
 
     const systemMessage: ChatCompletionMessageParam = {
         role: "system",
-        content: SYSTEM_PROMPT
+        content: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT
     };
 
     const allMessages = [systemMessage, ...messages];
@@ -86,7 +90,7 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
             max_tokens,
             tools: convertToolsToOpenAI(),
             tool_choice: "auto",
-            stream: true
+            stream: true,
         });
 
         let content: any[] = [];

@@ -1,11 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { anthropicTools } from "../context/tools";
-import { SYSTEM_PROMPT } from "../context/prompts";
 import { anthropicAPIKey } from "..";
+import { type planSchema } from "../types";
+import { z } from "zod";
+import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
+import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
+import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 
 
-export async function anthropicChat(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean) {
+export async function anthropicChat(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>) {
+    const addOns = addOnesConfig(plan);
+
     const anthropicClient = new Anthropic({
         apiKey: anthropicAPIKey,
     });
@@ -21,7 +27,7 @@ export async function anthropicChat(messages: MessageParam[], model: string, max
         }),
         system: [{
             type: "text",
-            text: SYSTEM_PROMPT,
+            text: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT,
             cache_control: {
                 type: "ephemeral"
             }
@@ -48,10 +54,9 @@ export async function anthropicChat(messages: MessageParam[], model: string, max
     };
 }
 
+export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
+    const addOns = addOnesConfig(plan);
 
-
-export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, callback: (event: any) => void) {
-    console.log('Streaming started');
     const anthropicClient = new Anthropic({
         apiKey: anthropicAPIKey,
     });
@@ -68,7 +73,7 @@ export async function anthropicChatStream(messages: MessageParam[], model: strin
             }),
             system: [{
                 type: "text",
-                text: SYSTEM_PROMPT,
+                text: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT,
                 cache_control: {
                     type: "ephemeral"
                 }

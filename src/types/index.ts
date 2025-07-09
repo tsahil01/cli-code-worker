@@ -6,6 +6,16 @@ export const msgSchema = z.object({
     role: z.enum(["user", "assistant"]),
     content: z.any(),
 })
+
+export const planModeSchema = z.enum(["lite", "full"]);
+
+export const addOnSchema = z.enum(["memory", "github", "advanced-context"]);
+
+export const planSchema = z.object({
+    mode: planModeSchema,
+    addOns: z.array(addOnSchema).optional(),
+})
+
 export const chatSchema = z.object({
     messages: z.array(msgSchema),
     provider: z.enum(["openai", "anthropic", "gemini", "other"]),
@@ -13,6 +23,7 @@ export const chatSchema = z.object({
     model: z.string(),
     temperature: z.number().min(0).max(1).optional(),
     max_tokens: z.number().optional(),
+    plan: planSchema
 })
 
 export const chatValidation = z.object({
@@ -45,9 +56,9 @@ export interface ModelCapabilities {
     createdAt?: string;
 }
 
-export interface GeminiInput extends Content {};
+export interface GeminiInput extends Content { };
 
-export interface AnthropicInput extends MessageParam {}
+export interface AnthropicInput extends MessageParam { }
 
 export interface OpenAIInput {
     role: "user" | "assistant" | "system";

@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { AnthropicInput, chatValidation, GeminiInput, OpenAIInput, UserData } from "../types";
+import { AnthropicInput, chatValidation, GeminiInput, OpenAIInput, planSchema, UserData } from "../types";
 import { verifyUser } from "../lib/auth";
 import { anthropicModels, openaiModels, geminiModels, otherModels } from "../lib/models";
 import { anthropicChat, anthropicChatStream } from "../proviers/antropic";
 import { geminiChat, geminiChatStream } from "../proviers/gemini";
 import { openaiChat, openaiChatStream } from "../proviers/openai";
+import { z } from "zod";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.post("/chat", async (req, res) => {
             return;
         }
         const { chat } = zodValidation.data;
-        const { messages, provider, base_url, model, temperature, max_tokens } = chat;
+        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
 
         const userData = await verifyUser(req, res);
         if (!userData) {
@@ -47,7 +48,7 @@ router.post("/chat", async (req, res) => {
                 return;
             }
 
-            const response = await anthropicChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking);
+            const response = await anthropicChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, plan);
 
             res.status(200).json({
                 message: response.content,
@@ -70,7 +71,7 @@ router.post("/chat", async (req, res) => {
                 return;
             }
 
-            const response = await geminiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, false);
+            const response = await geminiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, false, plan);
 
             res.status(200).json({
                 message: response.content,
@@ -93,7 +94,7 @@ router.post("/chat", async (req, res) => {
                 return;
             }
 
-            const response = await openaiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, base_url);
+            const response = await openaiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, plan, base_url);
 
             res.status(200).json({
                 message: response.content,
@@ -115,7 +116,7 @@ router.post("/chat", async (req, res) => {
                 return;
             }
 
-            const response = await openaiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, base_url);
+            const response = await openaiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, plan, base_url);
 
             res.status(200).json({
                 message: response.content,
@@ -145,7 +146,7 @@ router.post("/chat/stream", async (req, res) => {
         }
         const { chat } = zodValidation.data;
         console.log("chat", chat);
-        const { messages, provider, base_url, model, temperature, max_tokens } = chat;
+        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
 
         const userData = await verifyUser(req, res);
         if (!userData) {
@@ -182,6 +183,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.modelName, 
                     modelCapabilities.maxOutputTokens, 
                     modelCapabilities.thinking,
+                    plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
@@ -217,6 +219,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.modelName, 
                     modelCapabilities.maxOutputTokens, 
                     modelCapabilities.thinking,
+                    plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
@@ -251,6 +254,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.modelName, 
                     modelCapabilities.maxOutputTokens, 
                     modelCapabilities.thinking,
+                    plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
@@ -286,6 +290,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.modelName, 
                     modelCapabilities.maxOutputTokens, 
                     modelCapabilities.thinking,
+                    plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
@@ -323,7 +328,7 @@ router.post("/test/chat", async (req, res) => {
             return;
         }
         const { chat } = zodValidation.data;
-        const { messages, provider, base_url, model, temperature, max_tokens } = chat;
+        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
 
         const userData = await verifyUser(req, res);
         if (!userData) {
@@ -454,7 +459,7 @@ router.post("/test/chat/stream", async (req, res) => {
         }
         const { chat } = zodValidation.data;
         console.log("test chat", chat);
-        const { messages, provider, base_url, model, temperature, max_tokens } = chat;
+        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
 
         const userData = await verifyUser(req, res);
         if (!userData) {
@@ -469,7 +474,7 @@ router.post("/test/chat/stream", async (req, res) => {
             'Access-Control-Allow-Headers': 'Cache-Control'
         });
 
-        const simulateStream = async (provider: string, model: string) => {
+        const simulateStream = async (provider: string, model: string, plan: z.infer<typeof planSchema> ) => {
             const lastUserMessage = messages.filter(msg => msg.role === "user").pop()?.content || "Hello";
             
             const shouldCallTool = Math.random() < 0.5;
@@ -656,7 +661,7 @@ router.post("/test/chat/stream", async (req, res) => {
             }
 
             try {
-                await simulateStream(provider, model);
+                await simulateStream(provider, model, plan);
                 res.write(`{"type":"done"}\n`);
                 res.end();
 
@@ -674,7 +679,7 @@ router.post("/test/chat/stream", async (req, res) => {
             }
 
             try {
-                await simulateStream(provider, model);
+                await simulateStream(provider, model, plan);
                 res.write(`{"type":"done"}\n`);
                 res.end();
 
@@ -692,7 +697,7 @@ router.post("/test/chat/stream", async (req, res) => {
             }
 
             try {
-                await simulateStream(provider, model);
+                await simulateStream(provider, model, plan);
                 res.write(`{"type":"done"}\n`);
                 res.end();
 
@@ -710,7 +715,7 @@ router.post("/test/chat/stream", async (req, res) => {
             }
 
             try {
-                await simulateStream(provider, model);
+                await simulateStream(provider, model, plan);
                 res.write(`{"type":"done"}\n`);
                 res.end();
 
