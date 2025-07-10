@@ -19,58 +19,6 @@ function mapToGeminiRole(role: string): string {
     }
 }
 
-export async function geminiChat(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>) {
-    const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
-    const addOns = addOnesConfig(plan);
-
-    const mappedMessages = messages.map(msg => ({
-        ...msg,
-        role: mapToGeminiRole(msg.role as string)
-    }));
-
-    const response = await geminiClient.models.generateContent({
-        model,
-        contents: mappedMessages,
-        config: {
-            systemInstruction: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT,
-            maxOutputTokens: max_tokens,
-            ...(thinking && {
-                thinkingConfig: {
-                    thinkingBudget: 1000,
-                    includeThoughts: true,
-                },
-            }),
-            tools:[{
-                functionDeclarations: anthropicTools
-            }]
-        },
-    });
-
-    const thinkingBlocks = response.candidates?.[0]?.content?.parts?.filter((part: Part) => {
-        return part.thought === true;
-    });
-    const regularContent = response.candidates?.[0]?.content?.parts?.filter((part: Part) => {
-        return part.text && part.thought !== true;
-    });
-    const toolCalls = response.candidates?.[0]?.content?.parts?.filter((part: Part) => {
-        return part.functionCall;
-    });
-    const finishReason = response.candidates?.[0]?.finishReason;
-    const usageMetadata = response.usageMetadata;
-
-    const getThinking = () => thinkingBlocks?.map(block => block.text || '').join('\n');
-    const hasThinking = () => thinkingBlocks && thinkingBlocks.length > 0;
-
-    return {
-        thinking: thinkingBlocks,
-        content: regularContent,
-        toolCalls: toolCalls,
-        getThinking: getThinking(),
-        hasThinking: hasThinking(),
-        finishReason: finishReason,
-        usageMetadata: usageMetadata,
-    };
-}
 
 export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
     console.log("MSFSS", JSON.stringify(messages))
