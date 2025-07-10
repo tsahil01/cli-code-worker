@@ -2,9 +2,9 @@ import { Router } from "express";
 import { AnthropicInput, chatValidation, GeminiInput, OpenAIInput, planSchema, UserData } from "../types";
 import { verifyUser } from "../lib/auth";
 import { anthropicModels, openaiModels, geminiModels, otherModels } from "../lib/models";
-import { anthropicChat, anthropicChatStream } from "../proviers/antropic";
-import { geminiChat, geminiChatStream } from "../proviers/gemini";
-import { openaiChat, openaiChatStream } from "../proviers/openai";
+import { anthropicChatStream } from "../proviers/antropic";
+import { geminiChatStream } from "../proviers/gemini";
+import { openaiChatStream } from "../proviers/openai";
 import { z } from "zod";
 
 const router = Router();
@@ -18,125 +18,6 @@ router.get("/models", async (req, res) => {
     res.status(200).json({ models });
 });
 
-router.post("/chat", async (req, res) => {
-    try {
-        const zodValidation = chatValidation.safeParse(req.body)
-        if (!zodValidation.success) {
-            res.status(400).json({ error: "zod_validation_error", details: zodValidation.error.message })
-            return;
-        }
-        const { chat } = zodValidation.data;
-        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
-
-        const userData = await verifyUser(req, res);
-        if (!userData) {
-            return;
-        }
-
-        if (provider === "anthropic") {
-            const msgs: AnthropicInput[] = messages.map((msg) => ({
-                role: msg.role,
-                content: [{
-                    type: "text",
-                    text: msg.content,
-                }],
-            }));
-
-            const modelCapabilities = anthropicModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const response = await anthropicChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, plan);
-
-            res.status(200).json({
-                message: response.content,
-                thinking: response.getThinking(),
-                hasThinking: response.hasThinking(),
-                toolCalls: response.toolCalls,
-                finishReason: response.finishReason,
-                usageMetadata: response.usageMetadata,
-            })
-
-        } else if (provider === "gemini") {
-            const msgs: GeminiInput[] = messages.map((msg) => ({
-                role: msg.role,
-                parts: [{ text: msg.content }],
-            }));
-
-            const modelCapabilities = geminiModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const response = await geminiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, false, plan);
-
-            res.status(200).json({
-                message: response.content,
-                thinking: response.getThinking,
-                hasThinking: response.hasThinking,
-                toolCalls: response.toolCalls,
-                finishReason: response.finishReason,
-                usageMetadata: response.usageMetadata,
-            })
-
-        } else if (provider === "openai") {
-            const msgs: OpenAIInput[] = messages.map((msg) => ({
-                role: msg.role,
-                content: msg.content,
-            }));
-
-            const modelCapabilities = openaiModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const response = await openaiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, plan, base_url);
-
-            res.status(200).json({
-                message: response.content,
-                thinking: response.getThinking(),
-                hasThinking: response.hasThinking(),
-                toolCalls: response.toolCalls,
-                finishReason: response.finishReason,
-                usageMetadata: response.usageMetadata,
-            })
-        } else if (provider === "other") {
-            const msgs: OpenAIInput[] = messages.map((msg) => ({
-                role: msg.role,
-                content: msg.content,
-            }));
-
-            const modelCapabilities = otherModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const response = await openaiChat(msgs, modelCapabilities.modelName, modelCapabilities.maxOutputTokens, modelCapabilities.thinking, plan, base_url);
-
-            res.status(200).json({
-                message: response.content,
-                thinking: response.getThinking(),
-                hasThinking: response.hasThinking(),
-                toolCalls: response.toolCalls,
-                finishReason: response.finishReason,
-                usageMetadata: response.usageMetadata,
-            })
-        } else {
-            res.status(400).json({ error: "provider_not_supported", details: "Provider not supported" })
-        }
-
-
-    } catch (error) {
-        console.error("Error in /chat endpoint:", error);
-        res.status(500).json({ error: "internal_server_error", details: error })
-    }
-});
-
 router.post("/chat/stream", async (req, res) => {
     try {
         const zodValidation = chatValidation.safeParse(req.body)
@@ -145,7 +26,7 @@ router.post("/chat/stream", async (req, res) => {
             return;
         }
         const { chat } = zodValidation.data;
-        console.log("chat", chat);
+        console.log("chat", JSON.stringify(chat, null, 2));
         const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
 
         const userData = await verifyUser(req, res);
@@ -161,14 +42,8 @@ router.post("/chat/stream", async (req, res) => {
             'Access-Control-Allow-Headers': 'Cache-Control'
         });
 
+
         if (provider === "anthropic") {
-            const msgs: AnthropicInput[] = messages.map((msg) => ({
-                role: msg.role,
-                content: [{
-                    type: "text",
-                    text: msg.content,
-                }],
-            }));
 
             const modelCapabilities = anthropicModels.find((m) => m.modelName === model);
             if (!modelCapabilities) {
@@ -177,17 +52,74 @@ router.post("/chat/stream", async (req, res) => {
                 return;
             }
 
+            const msgs: AnthropicInput[] = messages.map((msg) => {
+                if (msg.role === "assistant") {
+                    const blocks: any[] = [];
+                    
+                    if (modelCapabilities?.thinking && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                        blocks.push({
+                            type: "thinking",
+                            thinking: msg.metadata?.thinkingContent || "",
+                            signature: msg.metadata?.thinkingSignature || "",
+                        });
+                    }
+                    
+                    if (msg.content && typeof msg.content === "string" && msg.content.trim().length > 0) {
+                        blocks.push({
+                            type: "text",
+                            text: msg.content,
+                        });
+                    }
+                    if (msg.metadata?.toolCalls?.length) {
+                        blocks.push(
+                            ...msg.metadata.toolCalls.map((toolCall) => ({
+                                type: "tool_use",
+                                id: toolCall.id,
+                                name: toolCall.name,
+                                input: toolCall.input,
+                            }))
+                        );
+                    }
+
+                    return {
+                        role: "assistant",
+                        content: blocks,
+                    } as AnthropicInput;
+                } else {
+                    if (msg.metadata?.toolCalls?.length) {
+                        return {
+                            role: "user",
+                            content: [
+                                {
+                                    type: "tool_result",
+                                    tool_use_id: msg.metadata.toolCalls[0].id,
+                                    content: msg.content as string,
+                                },
+                            ],
+                        } as AnthropicInput;
+                    }
+                    return {
+                        role: "user",
+                        content: msg.content as string,
+                    } as AnthropicInput;
+                }
+            });
+
+            console.log("msgs: ", JSON.stringify(msgs, null, 2));
+
+
+
             try {
                 await anthropicChatStream(
-                    msgs, 
-                    modelCapabilities.modelName, 
-                    modelCapabilities.maxOutputTokens, 
+                    msgs,
+                    modelCapabilities.modelName,
+                    modelCapabilities.maxOutputTokens,
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
-                        
+
                         if (event.type === 'final') {
                             res.write(`{"type":"done"}\n`);
                             res.end();
@@ -215,15 +147,15 @@ router.post("/chat/stream", async (req, res) => {
 
             try {
                 await geminiChatStream(
-                    msgs, 
-                    modelCapabilities.modelName, 
-                    modelCapabilities.maxOutputTokens, 
+                    msgs,
+                    modelCapabilities.modelName,
+                    modelCapabilities.maxOutputTokens,
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
-                        
+
                         if (event.type === 'final') {
                             res.write(`{"type":"done"}\n`);
                             res.end();
@@ -250,15 +182,15 @@ router.post("/chat/stream", async (req, res) => {
 
             try {
                 await openaiChatStream(
-                    msgs, 
-                    modelCapabilities.modelName, 
-                    modelCapabilities.maxOutputTokens, 
+                    msgs,
+                    modelCapabilities.modelName,
+                    modelCapabilities.maxOutputTokens,
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
-                        
+
                         if (event.type === 'final') {
                             res.write(`{"type":"done"}\n`);
                             res.end();
@@ -286,15 +218,15 @@ router.post("/chat/stream", async (req, res) => {
 
             try {
                 await openaiChatStream(
-                    msgs, 
-                    modelCapabilities.modelName, 
-                    modelCapabilities.maxOutputTokens, 
+                    msgs,
+                    modelCapabilities.modelName,
+                    modelCapabilities.maxOutputTokens,
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
                         console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
-                        
+
                         if (event.type === 'final') {
                             res.write(`{"type":"done"}\n`);
                             res.end();
@@ -319,136 +251,6 @@ router.post("/chat/stream", async (req, res) => {
     }
 });
 
-// Test route that mimics /chat but returns mock responses
-router.post("/test/chat", async (req, res) => {
-    try {
-        const zodValidation = chatValidation.safeParse(req.body)
-        if (!zodValidation.success) {
-            res.status(400).json({ error: "zod_validation_error", details: zodValidation.error.message })
-            return;
-        }
-        const { chat } = zodValidation.data;
-        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
-
-        const userData = await verifyUser(req, res);
-        if (!userData) {
-            return;
-        }
-
-        // Mock response that mimics the structure of actual LLM responses
-        const createMockResponse = (provider: string, model: string) => {
-            const lastUserMessage = messages.filter(msg => msg.role === "user").pop()?.content || "Hello";
-            
-            // Decide whether to simulate tool calling (30% chance)
-            const shouldCallTool = Math.random() < 0.3;
-            let mockToolCalls: any[] = [];
-            let mockMessage: string;
-            
-            if (shouldCallTool) {
-                mockMessage = `I'll help you with that. Let me check some files first. This is a test response from ${provider} model ${model}. Based on the file structure, I can see your project organization.`;
-                
-                // Create mock tool calls based on provider format
-                if (provider === "anthropic") {
-                    mockToolCalls.push({
-                        type: "tool_use",
-                        id: "toolu_test123",
-                        name: "list_files",
-                        input: { filePath: "./src" }
-                    });
-                } else if (provider === "gemini") {
-                    mockToolCalls.push({
-                        functionCall: {
-                            name: "list_files",
-                            args: { filePath: "./src" }
-                        }
-                    });
-                } else if (provider === "openai" || provider === "other") {
-                    mockToolCalls.push({
-                        id: "call_test123",
-                        type: "function",
-                        function: {
-                            name: "list_files",
-                            arguments: JSON.stringify({ filePath: "./src" })
-                        }
-                    });
-                }
-            } else {
-                mockMessage = `This is a test response from ${provider} model ${model}. You said: "${lastUserMessage}"`;
-            }
-            
-            return {
-                message: mockMessage,
-                thinking: provider === "anthropic" ? 
-                    (shouldCallTool ? "I should check the files to give a helpful response..." : "This is mock thinking content for testing purposes.") : 
-                    undefined,
-                hasThinking: provider === "anthropic",
-                toolCalls: mockToolCalls,
-                finishReason: "stop",
-                usageMetadata: {
-                    inputTokens: 50,
-                    outputTokens: mockMessage.split(' ').length,
-                    totalTokens: 50 + mockMessage.split(' ').length
-                }
-            };
-        };
-
-        if (provider === "anthropic") {
-            const modelCapabilities = anthropicModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const mockResponse = createMockResponse(provider, model);
-            res.status(200).json(mockResponse);
-
-        } else if (provider === "gemini") {
-            const modelCapabilities = geminiModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const mockResponse = createMockResponse(provider, model);
-            // Gemini has slightly different response structure
-            mockResponse.thinking = undefined;
-            mockResponse.hasThinking = false;
-            res.status(200).json(mockResponse);
-
-        } else if (provider === "openai") {
-            const modelCapabilities = openaiModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const mockResponse = createMockResponse(provider, model);
-            // OpenAI thinking support depends on model capabilities
-            mockResponse.thinking = modelCapabilities.thinking ? "Mock thinking for OpenAI model." : undefined;
-            mockResponse.hasThinking = !!modelCapabilities.thinking;
-            res.status(200).json(mockResponse);
-
-        } else if (provider === "other") {
-            const modelCapabilities = otherModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.status(400).json({ error: "model_not_found", details: "Model not found" })
-                return;
-            }
-
-            const mockResponse = createMockResponse(provider, model);
-            mockResponse.thinking = modelCapabilities.thinking ? "Mock thinking for other model." : undefined;
-            mockResponse.hasThinking = !!modelCapabilities.thinking;
-            res.status(200).json(mockResponse);
-
-        } else {
-            res.status(400).json({ error: "provider_not_supported", details: "Provider not supported" })
-        }
-
-    } catch (error) {
-        console.error("Error in /test/chat endpoint:", error);
-        res.status(500).json({ error: "internal_server_error", details: error })
-    }
-});
 
 router.post("/test/chat/stream", async (req, res) => {
     try {
@@ -474,15 +276,15 @@ router.post("/test/chat/stream", async (req, res) => {
             'Access-Control-Allow-Headers': 'Cache-Control'
         });
 
-        const simulateStream = async (provider: string, model: string, plan: z.infer<typeof planSchema> ) => {
+        const simulateStream = async (provider: string, model: string, plan: z.infer<typeof planSchema>) => {
             const lastUserMessage = messages.filter(msg => msg.role === "user").pop()?.content || "Hello";
-            
+
             const shouldCallTool = Math.random() < 0.5;
-            
+
             let mockMessage: string;
             let mockToolCalls: any[] = [];
             let followUpMessage: string = "";
-            
+
             if (shouldCallTool) {
                 // Generate tool scenario for propose_change_vscode only
                 const scenarios = [
@@ -495,10 +297,10 @@ router.post("/test/chat/stream", async (req, res) => {
 
                 const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
                 mockMessage = `${scenario.message} Response from ${provider} model ${model}.`;
-                
-                                // Create the propose_change_vscode tool call
+
+                // Create the propose_change_vscode tool call
                 const toolId = `${Date.now()}_0`;
-                
+
                 if (provider === "anthropic") {
                     const input = {
                         title: "Improve test.ts code quality",
@@ -511,7 +313,7 @@ router.post("/test/chat/stream", async (req, res) => {
                             }
                         ]
                     };
-                    
+
                     mockToolCalls.push({
                         type: "tool_use",
                         id: `toolu_${toolId}`,
@@ -530,7 +332,7 @@ router.post("/test/chat/stream", async (req, res) => {
                             }
                         ]
                     };
-                    
+
                     mockToolCalls.push({
                         functionCall: {
                             name: "propose_change_vscode",
@@ -549,7 +351,7 @@ router.post("/test/chat/stream", async (req, res) => {
                             }
                         ]
                     };
-                    
+
                     mockToolCalls.push({
                         id: `call_${toolId}`,
                         type: "function",
@@ -559,32 +361,32 @@ router.post("/test/chat/stream", async (req, res) => {
                         }
                     });
                 }
-                
+
                 // Store the follow-up message for later use in the streaming
                 followUpMessage = scenario.followUp;
             } else {
                 mockMessage = `This is a test streaming response from ${provider} model ${model}. You said: "${lastUserMessage}"`;
             }
-            
+
             const words = mockMessage.split(' ');
             let thinkingText: string | undefined;
 
-            const modelCapabilities = 
+            const modelCapabilities =
                 provider === "anthropic" ? anthropicModels.find(m => m.modelName === model) :
-                provider === "gemini" ? geminiModels.find(m => m.modelName === model) :
-                provider === "openai" ? openaiModels.find(m => m.modelName === model) :
-                provider === "other" ? otherModels.find(m => m.modelName === model) : null;
+                    provider === "gemini" ? geminiModels.find(m => m.modelName === model) :
+                        provider === "openai" ? openaiModels.find(m => m.modelName === model) :
+                            provider === "other" ? otherModels.find(m => m.modelName === model) : null;
 
             if (modelCapabilities?.thinking) {
                 // Simulate thinking stream (matches real provider format)
-                thinkingText = shouldCallTool ? 
-                    "I should check the files to give a helpful response..." : 
+                thinkingText = shouldCallTool ?
+                    "I should check the files to give a helpful response..." :
                     "Let me think about this test response...";
                 const thinkingWords = thinkingText.split(' ');
-                
+
                 for (const word of thinkingWords) {
-                    res.write(`${JSON.stringify({ 
-                        type: "thinking", 
+                    res.write(`${JSON.stringify({
+                        type: "thinking",
                         content: word + ' ',
                         block: { type: "thinking", content: word + ' ' }
                     })}\n`);
@@ -594,8 +396,8 @@ router.post("/test/chat/stream", async (req, res) => {
 
             // Simulate content stream (matches real provider format)
             for (const word of words) {
-                res.write(`${JSON.stringify({ 
-                    type: "content", 
+                res.write(`${JSON.stringify({
+                    type: "content",
                     content: word + ' ',
                     block: { type: "text", text: word + ' ' }
                 })}\n`);
@@ -605,37 +407,37 @@ router.post("/test/chat/stream", async (req, res) => {
             // Simulate tool calling if enabled
             if (shouldCallTool && mockToolCalls.length > 0) {
                 for (const toolCall of mockToolCalls) {
-                    res.write(`${JSON.stringify({ 
+                    res.write(`${JSON.stringify({
                         type: "tool_call",
                         toolCall: toolCall
                     })}\n`);
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
-                
+
                 // Add some delay to simulate tool execution
                 await new Promise(resolve => setTimeout(resolve, 500));
-                
+
                 // Stream the follow-up message after tool execution
-                const dynamicFollowUp = shouldCallTool && followUpMessage ? 
-                    ` ${followUpMessage}` : 
+                const dynamicFollowUp = shouldCallTool && followUpMessage ?
+                    ` ${followUpMessage}` :
                     " Based on the file structure, I can see your project organization.";
                 const followUpWords = dynamicFollowUp.split(' ');
-                
+
                 for (const word of followUpWords) {
-                    res.write(`${JSON.stringify({ 
-                        type: "content", 
+                    res.write(`${JSON.stringify({
+                        type: "content",
                         content: word + ' ',
                         block: { type: "text", text: word + ' ' }
                     })}\n`);
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
-                
+
                 // Update the final message for the summary
                 mockMessage += dynamicFollowUp;
             }
 
             // Send final message (matches real provider format)
-            res.write(`${JSON.stringify({ 
+            res.write(`${JSON.stringify({
                 type: "final",
                 finishReason: "stop",
                 usageMetadata: {
@@ -743,7 +545,7 @@ router.get("/user", async (req, res) => {
             return;
         }
 
-        res.status(200).json(userData); 
+        res.status(200).json(userData);
     } catch (error) {
         console.error("Error in /user endpoint:", error);
         res.status(500).json({ error: "internal_server_error", details: error });
