@@ -8,52 +8,6 @@ import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
 import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
 import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 
-
-export async function anthropicChat(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>) {
-    const addOns = addOnesConfig(plan);
-
-    const anthropicClient = new Anthropic({
-        apiKey: anthropicAPIKey,
-    });
-
-    const response = await anthropicClient.messages.create({
-        model,
-        max_tokens,
-        ...(thinking && {
-            thinking: {
-                type: "enabled",
-                budget_tokens: thinking ? 1025 : 0,
-            }
-        }),
-        system: [{
-            type: "text",
-            text: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT,
-            cache_control: {
-                type: "ephemeral"
-            }
-        }],
-        tools: anthropicTools,
-        messages: messages,
-    });
-
-    const thinkingBlocks = response.content.filter(block => block.type === "thinking");
-    const regularContent = response.content.filter(block => block.type !== "thinking");
-    const toolCalls = response.content.filter(block => block.type === "tool_use");
-    const finishReason = response.stop_reason;
-    const usageMetadata = response.usage;
-
-    return {
-        ...response,
-        thinking: thinkingBlocks,
-        content: regularContent,
-        toolCalls: toolCalls,
-        getThinking: () => thinkingBlocks.map(block => 'content' in block ? block.content : '').join('\n'),
-        hasThinking: () => thinkingBlocks.length > 0,
-        finishReason: finishReason,
-        usageMetadata: usageMetadata,
-    };
-}
-
 export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
     const addOns = addOnesConfig(plan);
 
@@ -100,7 +54,7 @@ export async function anthropicChatStream(messages: MessageParam[], model: strin
                 thinkingBlocks.push(contentBlock);
                 callback({
                     type: 'thinking',
-                    content: 'content' in contentBlock ? contentBlock.content : '',
+                    content: 'thinking' in contentBlock ? contentBlock.thinking : '',
                     block: contentBlock
                 });
             } else if (contentBlock.type === "tool_use") {
@@ -127,7 +81,7 @@ export async function anthropicChatStream(messages: MessageParam[], model: strin
             usageMetadata,
             fullMessage,
             summary: {
-                thinking: thinkingBlocks.map(block => 'content' in block ? block.content : '').join('\n'),
+                thinking: thinkingBlocks.map(block => 'thinking' in block ? block.thinking : '').join('\n'),
                 hasThinking: thinkingBlocks.length > 0,
                 toolCalls,
                 content: regularContent
