@@ -20,53 +20,6 @@ function convertToolsToOpenAI(): ChatCompletionTool[] {
     }));
 }
 
-export async function openaiChat(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, baseUrl?: string) {
-    const apiKey = openAIAPIKey || "any_other_key";
-    const addOns = addOnesConfig(plan);
-    const openaiClient = new OpenAI({
-        apiKey: apiKey,
-        ...(baseUrl && { baseURL: baseUrl })
-    });
-
-    const systemMessage: ChatCompletionMessageParam = {
-        role: "system",
-        content: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT
-    };
-
-    const allMessages = [systemMessage, ...messages];
-
-    const response = await openaiClient.chat.completions.create({
-        model,
-        messages: allMessages,
-        max_tokens,
-        tools: convertToolsToOpenAI(),
-        tool_choice: "auto"
-    });
-
-    const choice = response.choices[0];
-    const message = choice.message;
-    const finishReason = choice.finish_reason;
-    const usageMetadata = response.usage;
-
-    // Extract content and tool calls
-    const content = message.content ? [{ type: "text" as const, text: message.content }] : [];
-    const toolCalls = message.tool_calls || [];
-    
-    // OpenAI doesn't have separate thinking/reasoning in the response structure
-    // For o3 models, reasoning would be part of the content
-    const thinkingBlocks: any[] = [];
-
-    return {
-        thinking: thinkingBlocks,
-        content: content,
-        toolCalls: toolCalls,
-        getThinking: () => '',
-        hasThinking: () => false,
-        finishReason: finishReason,
-        usageMetadata: usageMetadata,
-        rawResponse: response
-    };
-}
 
 export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, plan: z.infer<typeof planSchema>,   callback: (event: any) => void, baseUrl?: string) {
     const apiKey = openAIAPIKey || "any_other_key";
