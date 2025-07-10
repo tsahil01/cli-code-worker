@@ -2,9 +2,59 @@ import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { Content } from "@google/genai";
 import { z } from "zod";
 
+export interface AnthropicFunctionCall {
+    type: 'tool_use';
+    id: string;
+    name: string;
+    input?: Record<string, any>;
+}
+
+export interface GeminiFunctionCall {
+    type?: 'tool_use';
+    id?: string;
+    thoughtSignature?: string;
+    functionCall: {
+        name: string;
+        args?: Record<string, any>;
+    };
+}
+
+export interface OpenAIFunctionCall {
+    type: 'tool_use';
+    id: string;
+    function: {
+        name: string;
+        arguments?: Record<string, any>;
+    };
+    index?: number;
+}
+
+export type FunctionCall = AnthropicFunctionCall | GeminiFunctionCall | OpenAIFunctionCall;
+
+
+export interface MessageMetadata {
+    thinkingContent?: string;
+    thinkingSignature?: string;
+    toolCalls?: FunctionCall[];
+    finishReason?: string;
+    usageMetadata?: any;
+}
+
 export const msgSchema = z.object({
-    role: z.enum(["user", "assistant"]),
+    role: z.enum(["user", "assistant", "system"]),
     content: z.any(),
+    isError: z.boolean().optional(),
+    ignoreInLLM: z.boolean().optional(),
+    ignoreInDisplay: z.boolean().optional(),
+    thinking: z.boolean().optional(),
+    metadata: z.object({
+        thinkingContent: z.string().optional(),
+        thinkingSignature: z.string().optional(),
+        toolCalls: z.array(z.any()).optional(),
+        finishReason: z.string().optional(),
+        usageMetadata: z.any().optional(),
+    }).optional(),
+
 })
 
 export const planModeSchema = z.enum(["lite", "full"]);
