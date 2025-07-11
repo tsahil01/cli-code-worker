@@ -10,7 +10,7 @@ import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure
 
 
 export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void, baseUrl?: string) {
-    const apiKey = "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";
+    const apiKey = openAIAPIKey || "any_other_key";
     const addOns = addOnesConfig(plan);
     const openaiClient = new OpenAI({
         apiKey: apiKey,
