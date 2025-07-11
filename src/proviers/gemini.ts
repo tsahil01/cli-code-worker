@@ -1,5 +1,5 @@
 import { GoogleGenAI, Content, Part } from "@google/genai";
-import { anthropicTools } from "../context/tools";
+import { geminiTools } from "../context/tools";
 import { geminiAPIKey } from "../index";
 import { planSchema } from "../types";
 import { z } from "zod";
@@ -21,7 +21,6 @@ function mapToGeminiRole(role: string): string {
 
 
 export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
-    console.log("MSFSS", JSON.stringify(messages))
     const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
     const addOns = addOnesConfig(plan); 
     try {
@@ -45,7 +44,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
                     },
                 }),
                 tools:[{
-                    functionDeclarations: anthropicTools
+                    functionDeclarations: geminiTools
                 }]
             },
         });

@@ -55,7 +55,7 @@ router.post("/chat/stream", async (req, res) => {
             const msgs: AnthropicInput[] = messages.map((msg) => {
                 if (msg.role === "assistant") {
                     const blocks: any[] = [];
-                    
+
                     if (modelCapabilities?.thinking && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
                         blocks.push({
                             type: "thinking",
@@ -63,7 +63,7 @@ router.post("/chat/stream", async (req, res) => {
                             signature: msg.metadata?.thinkingSignature || "",
                         });
                     }
-                    
+
                     if (msg.content && typeof msg.content === "string" && msg.content.trim().length > 0) {
                         blocks.push({
                             type: "text",
@@ -117,7 +117,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
-                        console.log(event.type);
+                        // console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
 
                         if (event.type === 'final') {
@@ -133,17 +133,53 @@ router.post("/chat/stream", async (req, res) => {
             }
 
         } else if (provider === "gemini") {
-            const msgs: GeminiInput[] = messages.map((msg) => ({
-                role: msg.role,
-                parts: [{ text: msg.content }],
-            }));
-
             const modelCapabilities = geminiModels.find((m) => m.modelName === model);
             if (!modelCapabilities) {
                 res.write(`data: ${JSON.stringify({ error: "model_not_found", details: "Model not found" })}\n\n`);
                 res.end();
                 return;
             }
+            const msgs: GeminiInput[] = messages.map((msg) => {
+                if (msg.role === "assistant" && msg.metadata?.toolCalls?.length) {
+                    return {
+                        role: "assistant",
+                        parts: [{
+                            functionCall: {
+                                name: msg.metadata.toolCalls[0].name,
+                                args: msg.metadata.toolCalls[0].input,
+                            }
+                        }],
+                        thoughtSignature: msg.metadata?.thinkingSignature || "",
+                    } as GeminiInput;
+                } else if (msg.role === "assistant" && !msg.metadata?.toolCalls?.length && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                    return {
+                        role: "assistant",
+                        parts: [{
+                            text: msg.metadata.thinkingContent,
+                        }],
+                        thoughtSignature: msg.metadata?.thinkingSignature || "",
+                    } as GeminiInput;
+                } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
+                    return {
+                        role: "user",
+                        parts: [{
+                            functionResponse: {
+                                name: msg.metadata.toolCalls[0].name,
+                                response: { data: (msg.content as string) },
+                            }
+                        }],
+                        thoughtSignature: msg.metadata?.thinkingSignature || "",
+                    } as GeminiInput;
+                } else {
+                    return {
+                        role: "user",
+                        parts: [{ text: msg.content }],
+                    } as GeminiInput;
+                }
+            });
+
+            console.log("msgs: ", JSON.stringify(msgs, null, 2));
+
 
             try {
                 await geminiChatStream(
@@ -153,7 +189,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
-                        console.log(event.type);
+                        // console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
 
                         if (event.type === 'final') {
@@ -188,7 +224,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
-                        console.log(event.type);
+                        // console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
 
                         if (event.type === 'final') {
@@ -224,7 +260,7 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.thinking,
                     plan,
                     (event) => {
-                        console.log(event.type);
+                        // console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
 
                         if (event.type === 'final') {
