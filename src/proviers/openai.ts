@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
-import { anthropicTools } from "../context/tools";
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { openaiTools } from "../context/tools";
 import { openAIAPIKey } from "../index";
 import { planSchema } from "../types";
 import { z } from "zod";
@@ -8,40 +8,118 @@ import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
 import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
 import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 
-// Convert Anthropic tools to OpenAI format
-function convertToolsToOpenAI(): ChatCompletionTool[] {
-    return anthropicTools.map(tool => ({
-        type: "function" as const,
-        function: {
-            name: (tool as any).name,
-            description: (tool as any).description,
-            parameters: (tool as any).input_schema
-        }
-    }));
-}
 
-
-export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, plan: z.infer<typeof planSchema>,   callback: (event: any) => void, baseUrl?: string) {
-    const apiKey = openAIAPIKey || "any_other_key";
-    const    addOns = addOnesConfig(plan);
+export async function openaiChatStream(messages: ChatCompletionMessageParam[], model: string, max_tokens: number, thinkingEnabled: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void, baseUrl?: string) {
+    const apiKey = "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";
+    const addOns = addOnesConfig(plan);
     const openaiClient = new OpenAI({
         apiKey: apiKey,
         ...(baseUrl && { baseURL: baseUrl })
     });
 
+    let systemContent = plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT;
+
     const systemMessage: ChatCompletionMessageParam = {
         role: "system",
-        content: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT
+        content: systemContent
     };
 
     const allMessages = [systemMessage, ...messages];
 
+
+
     try {
+        if (thinkingEnabled) {
+            try {
+                const responsesInput = allMessages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                    ...(msg.role === "user" && { type: "message" })
+                }));
+
+                const responsesApi = (openaiClient as any).responses;
+                if (responsesApi && responsesApi.create) {
+                    const response = await responsesApi.create({
+                        model,
+                        input: responsesInput,
+                        max_output_tokens: max_tokens,
+                        tools: openaiTools,
+                        reasoning: {
+                            effort: "medium",
+                            summary: "auto"
+                        }
+                    });
+
+                    let content: any[] = [];
+                    let toolCalls: any[] = [];
+                    let thinkingBlocks: any[] = [];
+                    let finishReason = response.status || "completed";
+                    let usageMetadata = response.usage;
+
+                    for (const item of response.output || []) {
+                        if (item.type === 'reasoning') {
+                            const summaries = item.summary || [];
+                            for (const summary of summaries) {
+                                if (summary.text) {
+                                    thinkingBlocks.push({ type: 'thinking', content: summary.text });
+                                    callback({
+                                        type: 'thinking',
+                                        content: summary.text,
+                                        block: { type: 'thinking', content: summary.text }
+                                    });
+                                }
+                            }
+                        } else if (item.type === 'message') {
+                            for (const contentItem of item.content || []) {
+                                if (contentItem.type === 'output_text') {
+                                    content.push({ type: 'text', text: contentItem.text });
+                                    callback({
+                                        type: 'content',
+                                        content: contentItem.text,
+                                        block: { type: 'text', text: contentItem.text }
+                                    });
+                                }
+                            }
+                        } else if (item.type === 'function_call') {
+                            console.log("TOOOOL", item);
+                            toolCalls.push({
+                                id: item.call_id,
+                                type: 'function',
+                                function: {
+                                    name: item.name,
+                                    arguments: item.arguments
+                                }
+                            });
+                            callback({
+                                type: 'tool_call',
+                                toolCall: item
+                            });
+                        }
+                    }
+
+                    callback({
+                        type: 'final',
+                        finishReason,
+                        usageMetadata,
+                        summary: {
+                            thinking: thinkingBlocks.map(block => block.content).join('\n'),
+                            hasThinking: thinkingBlocks.length > 0,
+                            toolCalls,
+                            content: content
+                        }
+                    });
+
+                    return;
+                }
+            } catch (error) {
+            }
+        }
+
         const stream = await openaiClient.chat.completions.create({
             model,
             messages: allMessages,
             max_tokens,
-            tools: convertToolsToOpenAI(),
+            tools: openaiTools,
             tool_choice: "auto",
             stream: true,
         });
@@ -52,8 +130,6 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
         let finishReason: string | null = null;
         let usageMetadata: any = null;
         let currentContent = '';
-        let currentToolCall: any = null;
-        let toolCallsMap = new Map();
 
         for await (const chunk of stream) {
             const choice = chunk.choices[0];
@@ -61,7 +137,6 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
 
             const delta = choice.delta;
 
-            // Handle regular content
             if (delta.content) {
                 currentContent += delta.content;
                 content.push({ type: 'text', text: delta.content });
@@ -72,67 +147,41 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
                 });
             }
 
-            // Handle tool calls
             if (delta.tool_calls) {
-                for (const toolCall of delta.tool_calls) {
-                    if (toolCall.index !== undefined) {
-                        const index = toolCall.index;
-                        
-                        if (!toolCallsMap.has(index)) {
-                            toolCallsMap.set(index, {
-                                index: index,
-                                id: toolCall.id || '',
-                                type: 'function',
-                                function: {
-                                    name: '',
-                                    arguments: ''
-                                }
-                            });
+                const toolCall = delta.tool_calls[0];
+                if (toolCall && toolCall.function?.name) {
+                    console.log("TOOOOL", toolCall);
+                    toolCalls.push({
+                        id: toolCall.id,
+                        type: 'function',
+                        function: {
+                            name: toolCall.function.name,
+                            arguments: toolCall.function?.arguments || ''
                         }
-
-                        const existingToolCall = toolCallsMap.get(index);
-
-                        if (toolCall.id) {
-                            existingToolCall.id = toolCall.id;
-                        }
-                        
-                        if (toolCall.function?.name) {
-                            existingToolCall.function.name += toolCall.function.name;
-                        }
-                        
-                        if (toolCall.function?.arguments) {
-                            existingToolCall.function.arguments += toolCall.function.arguments;
-                        }
-                    }
+                    });
+                    callback({
+                        type: 'tool_call',
+                        toolCall: toolCall
+                    });
                 }
-
-                callback({
-                    type: 'tool_call'
-                });
             }
 
-            // Handle finish reason
             if (choice.finish_reason) {
                 finishReason = choice.finish_reason;
             }
 
-            // Handle usage (usually comes at the end)
             if (chunk.usage) {
                 usageMetadata = chunk.usage;
             }
         }
 
-        // Convert tool calls map to array
-        toolCalls = Array.from(toolCallsMap.values());
-
-        // Send final summary
         callback({
             type: 'final',
             finishReason,
             usageMetadata,
             summary: {
-                thinking: '',
-                hasThinking: false,
+                thinking: thinkingBlocks.map(block => block.content).join('\n'),
+                hasThinking: thinkingBlocks.length > 0,
                 toolCalls,
                 content: content
             }
