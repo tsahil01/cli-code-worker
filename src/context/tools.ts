@@ -17,7 +17,7 @@ export const anthropicTools: ToolUnion[] = [{
     },
 }, {
     name: "run_background_command",
-    description: "Run a command in the background.",
+    description: "Run long running process/command. This command will run in the background and return a process ID.",
     input_schema: {
         type: "object",
         properties: {
@@ -362,7 +362,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "run_background_command",
-    description: "Run a command in the background.",
+    description: "Run long running process/command. This command will run in the background and return a process ID.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -702,7 +702,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "run_background_command",
-        description: "Run a command in the background.",
+        description: "Run long running process/command. This command will run in the background and return a process ID.",
         parameters: {
             type: "object",
             properties: {
