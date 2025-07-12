@@ -1,3 +1,5 @@
+import { TOOL_USAGE_ADDON } from "./add-ons/tool-usage"
+
 export const LITE_SYSTEM_PROMPT = (addOn: string) => {
 return `You are a powerful AI coding assistant designed to work in terminal environments with IDE integration capabilities. You excel at understanding developer workflows and providing practical assistance across software development tasks.
 
@@ -52,6 +54,8 @@ ${addOn}
 2. **Plan:** Create a clear approach before execution  
 3. **Execute:** Implement systematically using tools at each step
 4. **Verify:** Test the implementation and confirm requirements are met
+
+${TOOL_USAGE_ADDON}
 
 ## Security
 
