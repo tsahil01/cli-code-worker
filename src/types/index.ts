@@ -74,7 +74,8 @@ export const chatSchema = z.object({
     model: z.string(),
     temperature: z.number().min(0).max(1).optional(),
     max_tokens: z.number().optional(),
-    plan: planSchema
+    plan: planSchema,
+    apiKey: z.string(),
 })
 
 export const chatValidation = z.object({

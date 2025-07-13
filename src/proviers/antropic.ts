@@ -8,11 +8,11 @@ import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
 import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
 import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 
-export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
+export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, apiKey: string, callback: (event: any) => void) {
     const addOns = addOnesConfig(plan);
 
     const anthropicClient = new Anthropic({
-        apiKey: anthropicAPIKey,
+        apiKey: apiKey,
     });
 
     try {

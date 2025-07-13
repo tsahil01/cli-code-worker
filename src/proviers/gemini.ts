@@ -20,8 +20,8 @@ function mapToGeminiRole(role: string): string {
 }
 
 
-export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, callback: (event: any) => void) {
-    const geminiClient = new GoogleGenAI({ apiKey: geminiAPIKey });
+export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, apiKey: string, callback: (event: any) => void) {
+    const geminiClient = new GoogleGenAI({ apiKey: apiKey });
     const addOns = addOnesConfig(plan); 
     try {
         // Map roles to Gemini-compatible roles

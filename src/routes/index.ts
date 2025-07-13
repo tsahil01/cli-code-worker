@@ -14,7 +14,12 @@ router.get("/", (req, res) => {
 });
 
 router.get("/models", async (req, res) => {
-    const models = [...anthropicModels, ...openaiModels, ...geminiModels, ...otherModels];
+    const models = {
+        anthropic: anthropicModels,
+        openai: openaiModels,
+        gemini: geminiModels,
+        other: otherModels
+    }
     res.status(200).json({ models });
 });
 
@@ -27,7 +32,7 @@ router.post("/chat/stream", async (req, res) => {
         }
         const { chat } = zodValidation.data;
         console.log("chat", JSON.stringify(chat, null, 2));
-        const { messages, provider, base_url, model, temperature, max_tokens, plan } = chat;
+        const { messages, provider, base_url, model, temperature, max_tokens, plan, apiKey } = chat;
 
         const userData = await verifyUser(req, res);
         if (!userData) {
@@ -103,19 +108,15 @@ router.post("/chat/stream", async (req, res) => {
                 }
             });
 
-            console.log("msgs: ", JSON.stringify(msgs, null, 2));
-
-
-
             try {
                 await anthropicChatStream(
                     msgs,
                     modelCapabilities.modelName,
                     modelCapabilities.maxOutputTokens,
                     modelCapabilities.thinking,
-                    plan,
+                    plan,   
+                    apiKey,
                     (event) => {
-                        // console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
 
                         if (event.type === 'final') {
@@ -176,9 +177,6 @@ router.post("/chat/stream", async (req, res) => {
                 }
             });
 
-            console.log("MSGSS: ", JSON.stringify(msgs, null, 2));
-
-
             try {
                 await geminiChatStream(
                     msgs,
@@ -186,8 +184,8 @@ router.post("/chat/stream", async (req, res) => {
                     modelCapabilities.maxOutputTokens,
                     modelCapabilities.thinking,
                     plan,
+                    apiKey,
                     (event) => {
-                        // console.log(event.type);
                         res.write(`${JSON.stringify(event)}\n`);
 
                         if (event.type === 'final') {
@@ -195,138 +193,6 @@ router.post("/chat/stream", async (req, res) => {
                             res.end();
                         }
                     }
-                );
-
-            } catch (error) {
-                res.write(`data: ${JSON.stringify({ error: "stream_error", details: error })}\n\n`);
-                res.end();
-            }
-        } else if (provider === "openai" || provider === "other") {
-            const msgs: OpenAIInput[] = messages.map((msg) => {
-                if (msg.role === "assistant" && msg.metadata?.toolCalls?.length) {
-                    return {
-                        role: "assistant",
-                        content: msg.content || null,
-                        tool_calls: msg.metadata?.toolCalls?.map((toolCall) => {
-                            return {
-                                id: toolCall.id,
-                                type: "function",
-                                function: {
-                                    name: toolCall.function?.name,
-                                    arguments: JSON.stringify(toolCall.function?.arguments)
-                                }
-                            }
-                        })
-                    } as OpenAIInput;
-                } else if (msg.role === "assistant" && !msg.metadata?.toolCalls?.length) {
-                    return {
-                        role: "assistant",
-                        content: msg.content || null,
-                    } as OpenAIInput;
-                } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
-                    return {
-                        role: "tool",
-                        tool_call_id: msg.metadata.toolCalls[0].id,
-                        content: msg.content as string || "",
-                    } as OpenAIInput;
-                } else {
-                    return {
-                        role: msg.role,
-                        content: msg.content || null,
-                    } as OpenAIInput;
-                }
-            });
-
-            const modelCapabilities = openaiModels.find((m) => m.modelName === model) || otherModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.write(`data: ${JSON.stringify({ error: "model_not_found", details: "Model not found" })}\n\n`);
-                res.end();
-                return;
-            }
-
-            try {
-                await openaiChatStream(
-                    msgs,
-                    modelCapabilities.modelName,
-                    modelCapabilities.maxOutputTokens,
-                    modelCapabilities.thinking,
-                    plan,
-                    (event) => {
-                        console.log(event.type);
-                        res.write(`${JSON.stringify(event)}\n`);
-
-                        if (event.type === 'final') {
-                            res.write(`{"type":"done"}\n`);
-                            res.end();
-                        }
-                    },
-                    base_url
-                );
-
-            } catch (error) {
-                res.write(`data: ${JSON.stringify({ error: "stream_error", details: error })}\n\n`);
-                res.end();
-            }
-        } else if (provider === "otkher") {
-            const msgs: OpenAIInput[] = messages.map((msg) => {
-                if (msg.role === "assistant" && msg.metadata?.toolCalls?.length) {
-                    return {
-                        role: "assistant",
-                        content: msg.content || null,
-                        tool_calls: msg.metadata?.toolCalls?.map((toolCall) => {
-                            return {
-                                id: toolCall.id,
-                                type: "function",
-                                function: {
-                                    name: toolCall.name,
-                                    arguments: JSON.stringify(toolCall.input)
-                                }
-                            }
-                        })
-                    } as OpenAIInput;
-                } else if (msg.role === "assistant" && !msg.metadata?.toolCalls?.length) {
-                    return {
-                        role: "assistant",
-                        content: msg.content || null,
-                    } as OpenAIInput;
-                } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
-                    return {
-                        role: "tool",
-                        tool_call_id: msg.metadata.toolCalls[0].id,
-                        content: msg.content as string || "",
-                    } as OpenAIInput;
-                } else {
-                    return {
-                        role: msg.role,
-                        content: msg.content || null,
-                    } as OpenAIInput;
-                }
-            });
-
-            const modelCapabilities = otherModels.find((m) => m.modelName === model);
-            if (!modelCapabilities) {
-                res.write(`data: ${JSON.stringify({ error: "model_not_found", details: "Model not found" })}\n\n`);
-                res.end();
-                return;
-            }
-
-            try {
-                await openaiChatStream(
-                    msgs,
-                    modelCapabilities.modelName,
-                    modelCapabilities.maxOutputTokens,
-                    modelCapabilities.thinking,
-                    plan,
-                    (event) => {
-                        // console.log(event.type);
-                        res.write(`${JSON.stringify(event)}\n`);
-
-                        if (event.type === 'final') {
-                            res.write(`{"type":"done"}\n`);
-                            res.end();
-                        }
-                    },
-                    base_url
                 );
 
             } catch (error) {
