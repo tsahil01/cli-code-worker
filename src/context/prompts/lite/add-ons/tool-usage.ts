@@ -25,10 +25,12 @@ export const TOOL_USAGE_ADDON = `
 **Search and Navigation (Use Extensively):**
 - ALWAYS use \`grep_search\` for finding ANY text, patterns, functions, variables, or code across the codebase
 - Use \`grep_search\` when in doubt about where something is located - search first, then act
-- Use \`file_search\` extensively for finding files by name, partial names, or extensions
-- Use \`codebase_search\` for semantic understanding of code structure and relationships
-- When confused about project structure, use multiple search tools to understand the codebase
+- Use \`grep_search\` extensively for finding files by name, partial names, or extensions by searching for filenames
+- Use \`grep_search\` for semantic understanding of code structure and relationships by searching for class names, function names, and patterns
+- When confused about project structure, use \`grep_search\` extensively with different search terms to understand the codebase
 - Search before making assumptions about code location or structure
+- Use \`grep_search\` with multiple patterns to thoroughly explore codebases
+- CRITICAL: \`grep_search\` is your primary discovery tool - use it liberally for any code exploration
 
 **IDE Integration Priority:**
 - Use \`open_file_vscode\` for opening files in the editor context
@@ -37,7 +39,6 @@ export const TOOL_USAGE_ADDON = `
 - Use \`propose_change_vscode\` for complex code changes that need review
 
 **User Experience Tools:**
-- Use \`show_notification\` to inform users of important events or errors
 - Use \`select_text\` to highlight relevant code sections for users
 
 **Error Handling and Validation:**
@@ -47,15 +48,16 @@ export const TOOL_USAGE_ADDON = `
 
 **Tool Combination Patterns (Use Extensively):**
 - Combine \`list_files\` + \`grep_search\` for targeted code exploration and understanding project structure
-- Use \`file_search\` + \`grep_search\` to first find files, then search within them for specific patterns
+- Use \`grep_search\` multiple times with different patterns to thoroughly search codebases
 - Combine \`get_active_file\` + \`get_text_selection\` for context-aware assistance
 - Use \`check_current_directory\` + \`list_files\` + \`grep_search\` for comprehensive project analysis
 - Combine \`run_command\` + \`read_file\` for configuration validation
 - Use \`grep_search\` + \`read_file\` to find and then examine specific code sections
-- Combine \`file_search\` + \`list_files\` + \`grep_search\` for thorough codebase exploration
+- Use \`list_files\` + \`grep_search\` extensively for thorough codebase exploration
 - Use \`get_diagnostics\` + \`grep_search\` to find and understand error sources
-- Combine multiple search tools when confused: \`file_search\` → \`grep_search\` → \`read_file\`
-- Use \`list_files\` + \`file_search\` + \`grep_search\` in sequence for comprehensive understanding
+- Combine multiple \`grep_search\` calls when confused: search for filenames → search for functions → search for patterns
+- Use \`list_files\` + \`grep_search\` (multiple times) + \`read_file\` in sequence for comprehensive understanding
+- ALWAYS use \`grep_search\` as your first exploration step before making any assumptions
 
 **Safety and Validation:**
 - Always verify command success by checking output/exit codes
