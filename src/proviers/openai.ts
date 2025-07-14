@@ -81,7 +81,6 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
                                 }
                             }
                         } else if (item.type === 'function_call') {
-                            console.log("TOOOOL", item);
                             toolCalls.push({
                                 id: item.call_id,
                                 type: 'function',
@@ -150,7 +149,6 @@ export async function openaiChatStream(messages: ChatCompletionMessageParam[], m
             if (delta.tool_calls) {
                 const toolCall = delta.tool_calls[0];
                 if (toolCall && toolCall.function?.name) {
-                    console.log("TOOOOL", toolCall);
                     toolCalls.push({
                         id: toolCall.id,
                         type: 'function',

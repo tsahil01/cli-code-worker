@@ -19,7 +19,7 @@ export async function verifyUser(req: Request, res: Response): Promise<UserData 
         const userData = decoded as UserData;
         const currentDate = new Date();
 
-        if (userData.subscriptions[0].status !== "ACTIVE" || new Date(userData.subscriptions[0].nextPeriodStart) < currentDate) {
+        if ((userData.subscriptions[0].status !== "ACTIVE" && userData.subscriptions[0].status !== "TRIAL") || (new Date(userData.subscriptions[0].nextPeriodStart) < currentDate)) {
             res.status(403).json({ error: "subscription_not_active" })
             return null;
         }
