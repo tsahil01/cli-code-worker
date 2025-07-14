@@ -4,7 +4,7 @@ import { ChatCompletionTool, } from "openai/resources/index";
 
 export const anthropicTools: ToolUnion[] = [{
     name: "run_command",
-    description: "Execute a Linux command and return output.",
+    description: "Executes a command in the terminal",
     input_schema: {
         type: "object",
         properties: {
@@ -85,7 +85,7 @@ export const anthropicTools: ToolUnion[] = [{
 
 }, {
     name: "read_file",
-    description: "Read a file's content.",
+    description: "Read a file's content by providing the file path.",
     input_schema: {
         type: "object",
         properties: {
@@ -144,7 +144,7 @@ export const anthropicTools: ToolUnion[] = [{
 
 }, {
     name: "grep_search",
-    description: "Search for a term in files.",
+    description: "Search for a term in files like 'grep -r 'searchTerm' filePath'.",
     input_schema: {
         type: "object",
         properties: {
@@ -192,25 +192,8 @@ export const anthropicTools: ToolUnion[] = [{
         required: ["filePath"]
     }
 }, {
-    name: "write_file_vscode",
-    description: "Writes content to a file in the VSCode workspace.",
-    input_schema: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "Path to the file to write"
-            },
-            content: {
-                type: "string",
-                description: "Content to write to the file"
-            }
-        },
-        required: ["filePath", "content"]
-    }
-}, {
     name: "delete_file",
-    description: "Deletes a file from the workspace.",
+    description: "Deletes a file from the system.",
     input_schema: {
         type: "object",
         properties: {
@@ -247,63 +230,44 @@ export const anthropicTools: ToolUnion[] = [{
         required: ["startLine", "startChar", "endLine", "endChar"]
     }
 }, {
-    name: "show_notification",
-    description: "Shows a notification in VSCode.",
+    name: "propose_change_vscode",
+    description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace.",
     input_schema: {
         type: "object",
         properties: {
-            message: {
+            title: {
                 type: "string",
-                description: "Message to display in the notification"
+                description: "Title of the change proposal (shown in diff dialog)"
             },
-            type: {
+            filePath: {
                 type: "string",
-                enum: ["info", "warning", "error"],
-                description: "Type of notification to show",
-                default: "info"
-            }
-        },
-        required: ["message"]
-    }
-}, {
-    "name": "propose_change_vscode",
-    "description": "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "title": {
-                "type": "string",
-                "description": "Title of the change proposal (shown in diff dialog)"
+                description: "Path to the file to be modified"
             },
-            "filePath": {
-                "type": "string",
-                "description": "Path to the file to be modified"
-            },
-            "changes": {
-                "type": "array",
-                "description": "Array of content-based changes to apply",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "originalContent": {
-                            "type": "string",
-                            "description": "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
+            changes: {
+                type: "array",
+                description: "Array of content-based changes to apply",
+                items: {
+                    type: "object",
+                    properties: {
+                        originalContent: {
+                            type: "string",
+                                description: "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
                         },
-                        "proposedContent": {
-                            "type": "string",
-                            "description": "New content to replace the original content with"
+                        proposedContent: {
+                            type: "string",
+                            description: "New content to replace the original content with"
                         },
-                        "description": {
-                            "type": "string",
-                            "description": "Optional description of this specific change"
+                        description: {
+                            type: "string",
+                            description: "Optional description of this specific change"
                         }
                     },
-                    "required": ["originalContent", "proposedContent"]
+                    required: ["originalContent", "proposedContent"]
                 },
-                "minItems": 1
+                minItems: 1
             }
         },
-        "required": ["title", "filePath", "changes"]
+        required: ["title", "filePath", "changes"]
     }
 }, {
     name: "get_active_file",
@@ -349,7 +313,7 @@ export const anthropicTools: ToolUnion[] = [{
 
 export const geminiTools: FunctionDeclaration[] = [{
     name: "run_command",
-    description: "Execute a Linux command and return output.",
+    description: "Executes a command in the terminal",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -362,7 +326,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "run_background_command",
-    description: "Run long running process/command. This command will run in the background and return a process ID.",
+    description: "Run long running process/command like 'npm run dev'. This command will run in the background and return a process ID.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -426,7 +390,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "read_file",
-    description: "Read a file's content.",
+    description: "Read a file's content by providing the file path.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -436,23 +400,6 @@ export const geminiTools: FunctionDeclaration[] = [{
             }
         },
         required: ["filePath"]
-    }
-}, {
-    name: "write_file",
-    description: "Write content to a file.",
-    parameters: {
-        type: Type.OBJECT,
-        properties: {
-            filePath: {
-                type: Type.STRING,
-                description: "The file path to write to"
-            },
-            content: {
-                type: Type.STRING,
-                description: "The content to write to the file"
-            }
-        },
-        required: ["filePath", "content"]
     }
 }, {
     name: "open_file",
@@ -482,7 +429,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "grep_search",
-    description: "Search for a term in files.",
+    description: "Search for a term in files like 'grep -r 'searchTerm' filePath'.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -529,25 +476,8 @@ export const geminiTools: FunctionDeclaration[] = [{
         required: ["filePath"]
     }
 }, {
-    name: "write_file_vscode",
-    description: "Writes content to a file in the VSCode workspace.",
-    parameters: {
-        type: Type.OBJECT,
-        properties: {
-            filePath: {
-                type: Type.STRING,
-                description: "Path to the file to write"
-            },
-            content: {
-                type: Type.STRING,
-                description: "Content to write to the file"
-            }
-        },
-        required: ["filePath", "content"]
-    }
-}, {
     name: "delete_file",
-    description: "Deletes a file from the workspace.",
+    description: "Deletes a file from the system.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -582,24 +512,6 @@ export const geminiTools: FunctionDeclaration[] = [{
             }
         },
         required: ["startLine", "startChar", "endLine", "endChar"]
-    }
-}, {
-    name: "show_notification",
-    description: "Shows a notification in VSCode.",
-    parameters: {
-        type: Type.OBJECT,
-        properties: {
-            message: {
-                type: Type.STRING,
-                description: "Message to display in the notification"
-            },
-            type: {
-                type: Type.STRING,
-                enum: ["info", "warning", "error"],
-                description: "Type of notification to show"
-            }
-        },
-        required: ["message"]
     }
 }, {
     name: "propose_change_vscode",
@@ -686,7 +598,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "run_command",
-        description: "Execute a Linux command and return output.",
+        description: "Executes a command in the terminal",
         parameters: {
             type: "object",
             properties: {
@@ -781,7 +693,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "read_file",
-        description: "Read a file's content.",
+        description: "Read a file's content by providing the file path.",
         parameters: {
             type: "object",
             properties: {
@@ -849,7 +761,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "grep_search",
-        description: "Search for a term in files.",
+        description: "Search for a term in files like 'grep -r 'searchTerm' filePath'.",
         parameters: {
             type: "object",
             properties: {
@@ -923,7 +835,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "delete_file",
-        description: "Deletes a file from the workspace.",
+        description: "Deletes a file from the system.",
         parameters: {
             type: "object",
             properties: {
@@ -961,28 +873,6 @@ export const openaiTools: ChatCompletionTool[] = [{
                 }
             },
             required: ["startLine", "startChar", "endLine", "endChar"]
-        }
-    }
-}, {
-    type: "function",
-    function: {
-        name: "show_notification",
-        description: "Shows a notification in VSCode.",
-        parameters: {
-            type: "object",
-            properties: {
-                message: {
-                    type: "string",
-                    description: "Message to display in the notification"
-                },
-                type: {
-                    type: "string",
-                    enum: ["info", "warning", "error"],
-                    description: "Type of notification to show",
-                    default: "info"
-                }
-            },
-            required: ["message"]
         }
     }
 }, {
