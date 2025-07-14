@@ -118,7 +118,7 @@ export const openaiModels: ModelCapabilities[] = [{
 
 export const geminiModels: ModelCapabilities[] = [{
     modelName: "gemini-2.5-pro",
-    provider: "google",
+    provider: "gemini",
     displayName: "Gemini 2.5 Pro",
     maxInputTokens: 1048576,
     maxOutputTokens: 65536,
@@ -127,7 +127,7 @@ export const geminiModels: ModelCapabilities[] = [{
     maxThinkingTokens: 32768,
 }, {
     modelName: "gemini-2.5-flash",
-    provider: "google",
+    provider: "gemini",
     displayName: "Gemini 2.5 Flash",
     maxInputTokens: 1048576,
     maxOutputTokens: 65535,
@@ -136,7 +136,7 @@ export const geminiModels: ModelCapabilities[] = [{
     maxThinkingTokens: 24576,
 }, {
     modelName: "gemini-2.5-flash-lite-preview-06-17",
-    provider: "google",
+    provider: "gemini",
     displayName: "Gemini 2.5 Flash-Lite",
     maxInputTokens: 1000000,
     maxOutputTokens: 64000,
@@ -145,7 +145,7 @@ export const geminiModels: ModelCapabilities[] = [{
     maxThinkingTokens: 24576,
 }, {
     modelName: "gemini-2.0-flash",
-    provider: "google",
+    provider: "gemini",
     displayName: "Gemini 2.0 Flash",
     maxInputTokens: 1048576,
     maxOutputTokens: 8192,
