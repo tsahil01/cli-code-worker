@@ -71,7 +71,7 @@ export const anthropicTools: ToolUnion[] = [{
 
 }, {
     name: "list_files",
-    description: "List files in a directory.",
+    description: "List files in the directory path. Path is relative to the current directory.",
     input_schema: {
         type: "object",
         properties: {
@@ -85,7 +85,7 @@ export const anthropicTools: ToolUnion[] = [{
 
 }, {
     name: "read_file",
-    description: "Read a file's content by providing the file path.",
+    description: "Read a file's content by providing the file path. Path is relative to the current directory.",
     input_schema: {
         type: "object",
         properties: {
@@ -99,7 +99,7 @@ export const anthropicTools: ToolUnion[] = [{
 
 }, {
     name: "write_file",
-    description: "Write content to a file.",
+    description: "Write content to a file. Path is relative to the current directory.",
     input_schema: {
         type: "object",
         properties: {
@@ -116,7 +116,7 @@ export const anthropicTools: ToolUnion[] = [{
     }
 }, {
     name: "open_file",
-    description: "Open a file with the default application.",
+    description: "Open a file with the default application. Path is relative to the current directory.",
     input_schema: {
         type: "object",
         properties: {
@@ -231,7 +231,7 @@ export const anthropicTools: ToolUnion[] = [{
     }
 }, {
     name: "propose_change_vscode",
-    description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace.",
+    description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace. Path is absolute.",
     input_schema: {
         type: "object",
         properties: {
@@ -241,7 +241,7 @@ export const anthropicTools: ToolUnion[] = [{
             },
             filePath: {
                 type: "string",
-                description: "Path to the file to be modified"
+                description: "Path to the file to be modified. Path is absolute."
             },
             changes: {
                 type: "array",
@@ -377,7 +377,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "list_files",
-    description: "List files in a directory.",
+    description: "List files in the directory path. Path is relative to the current directory.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -390,7 +390,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "read_file",
-    description: "Read a file's content by providing the file path.",
+    description: "Read a file's content by providing the file path. Path is relative to the current directory.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -403,7 +403,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "open_file",
-    description: "Open a file with the default application.",
+    description: "Open a file with the default application. Path is relative to the current directory.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -515,7 +515,7 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }, {
     name: "propose_change_vscode",
-    description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace.",
+    description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace. Path is absolute.",
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -525,7 +525,7 @@ export const geminiTools: FunctionDeclaration[] = [{
             },
             filePath: {
                 type: Type.STRING,
-                description: "Path to the file to be modified"
+                description: "Path to the file to be modified. Path is absolute."
             },
             changes: {
                 type: Type.ARRAY,
@@ -677,7 +677,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "list_files",
-        description: "List files in a directory.",
+        description: "List files in the directory path. Path is relative to the current directory.",
         parameters: {
             type: "object",
             properties: {
@@ -693,7 +693,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "read_file",
-        description: "Read a file's content by providing the file path.",
+        description: "Read a file's content by providing the file path. Path is relative to the current directory.",
         parameters: {
             type: "object",
             properties: {
@@ -709,7 +709,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "write_file",
-        description: "Write content to a file.",
+        description: "Write content to a file. Path is relative to the current directory.",
         parameters: {
             type: "object",
             properties: {
@@ -729,7 +729,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "open_file",
-        description: "Open a file with the default application.",
+        description: "Open a file with the default application. Path is relative to the current directory.",
         parameters: {
             type: "object",
             properties: {
@@ -879,7 +879,7 @@ export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
     function: {
         name: "propose_change_vscode",
-        description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace.",
+        description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace. Path is absolute.",
         parameters: {
             type: "object",
             properties: {
@@ -889,7 +889,7 @@ export const openaiTools: ChatCompletionTool[] = [{
                 },
                 filePath: {
                     type: "string",
-                    description: "Path to the file to be modified"
+                    description: "Path to the file to be modified. Path is absolute."
                 },
                 changes: {
                     type: "array",
