@@ -9,6 +9,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 32000,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-sonnet-4-20250514",
     provider: "anthropic",
@@ -18,6 +20,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 64000,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-7-sonnet-20250219",
     provider: "anthropic",
@@ -27,6 +31,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 128000,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-5-sonnet-20241022",
     provider: "anthropic",
@@ -34,6 +40,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     maxInputTokens: 200000,
     maxOutputTokens: 8192,
     thinking: false,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-5-haiku-20241022",
     provider: "anthropic",
@@ -41,6 +49,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     maxInputTokens: 200000,
     maxOutputTokens: 8192,
     thinking: false,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-5-sonnet-20240620",
     provider: "anthropic",
@@ -48,6 +58,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     maxInputTokens: 200000,
     maxOutputTokens: 8192,
     thinking: false,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-sonnet-20240229",
     provider: "anthropic",
@@ -55,6 +67,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     maxInputTokens: 200000,
     maxOutputTokens: 4096,
     thinking: false,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-haiku-20240307",
     provider: "anthropic",
@@ -62,6 +76,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     maxInputTokens: 200000,
     maxOutputTokens: 4096,
     thinking: false,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }, {
     modelName: "claude-3-opus-20240229",
     provider: "anthropic",
@@ -69,6 +85,8 @@ export const anthropicModels: ModelCapabilities[] = [{
     maxInputTokens: 200000,
     maxOutputTokens: 4096,
     thinking: false,
+    sdk: "anthropic",
+    apiKeyName: "ANTHROPIC_API_KEY",
 }];
 
 export const openaiModels: ModelCapabilities[] = [{
@@ -80,6 +98,8 @@ export const openaiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 32000,
+    sdk: "openai",
+    apiKeyName: "OPENAI_API_KEY",
 }, {
     modelName: "o3",
     provider: "openai",
@@ -89,6 +109,8 @@ export const openaiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 32000,
+    sdk: "openai",
+    apiKeyName: "OPENAI_API_KEY",
 }, {
     modelName: "o3-pro", // does not support /chat/completions endpoint
     provider: "openai",
@@ -98,6 +120,8 @@ export const openaiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 32000,
+    sdk: "openai",
+    apiKeyName: "OPENAI_API_KEY",
 }, {
     modelName: "o3-mini",
     provider: "openai",
@@ -107,6 +131,8 @@ export const openaiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 1024,
     maxThinkingTokens: 16000,
+    sdk: "openai",
+    apiKeyName: "OPENAI_API_KEY",
 }, {
     modelName: "gpt-4o-mini",
     provider: "openai",
@@ -114,6 +140,8 @@ export const openaiModels: ModelCapabilities[] = [{
     maxInputTokens: 128000,
     maxOutputTokens: 16384,
     thinking: false,
+    sdk: "openai",
+    apiKeyName: "OPENAI_API_KEY",
 }];
 
 export const geminiModels: ModelCapabilities[] = [{
@@ -125,6 +153,8 @@ export const geminiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 128,
     maxThinkingTokens: 32768,
+    sdk: "gemini",
+    apiKeyName: "GEMINI_API_KEY",
 }, {
     modelName: "gemini-2.5-flash",
     provider: "gemini",
@@ -134,6 +164,8 @@ export const geminiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 0,
     maxThinkingTokens: 24576,
+    sdk: "gemini",
+    apiKeyName: "GEMINI_API_KEY",
 }, {
     modelName: "gemini-2.5-flash-lite-preview-06-17",
     provider: "gemini",
@@ -143,6 +175,8 @@ export const geminiModels: ModelCapabilities[] = [{
     thinking: true,
     minThinkingTokens: 512,
     maxThinkingTokens: 24576,
+    sdk: "gemini",
+    apiKeyName: "GEMINI_API_KEY",
 }, {
     modelName: "gemini-2.0-flash",
     provider: "gemini",
@@ -150,24 +184,18 @@ export const geminiModels: ModelCapabilities[] = [{
     maxInputTokens: 1048576,
     maxOutputTokens: 8192,
     thinking: false,
+    sdk: "gemini",
+    apiKeyName: "GEMINI_API_KEY",
 }];
 
 export const otherModels: ModelCapabilities[] = [{
-    modelName: "openrouter/cypher-alpha:free",
-    provider: "other",
-    displayName: "Cypher Alpha",
-    maxInputTokens: 1048576,
-    maxOutputTokens: 65536,
-    thinking: true,
-    minThinkingTokens: 128,
-    maxThinkingTokens: 32768,
-}, {
-    modelName: "mistralai/mistral-small-3.2-24b-instruct:free",
-    provider: "other",
-    displayName: "Mistral Small 3.2",
-    maxInputTokens: 1048576,
-    maxOutputTokens: 65536,
-    thinking: true,
-    minThinkingTokens: 128,
-    maxThinkingTokens: 32768,
+    modelName: "kimi-k2-0711-preview",
+    provider: "moonshot",
+    displayName: "Kimi K2",
+    maxInputTokens: 128000,
+    maxOutputTokens: 8192,
+    thinking: false,
+    sdk: "anthropic",
+    baseUrl: "https://api.moonshot.ai/anthropic",
+    apiKeyName: "MOONSHOT_API_KEY",
 }];
