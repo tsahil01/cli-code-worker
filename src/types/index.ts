@@ -69,7 +69,8 @@ export const planSchema = z.object({
 
 export const chatSchema = z.object({
     messages: z.array(msgSchema),
-    provider: z.enum(["openai", "anthropic", "gemini", "other"]),
+    sdk: z.enum(["openai", "anthropic", "gemini", "other"]),
+    provider: z.string(),
     base_url: z.string().url().optional(),
     model: z.string(),
     temperature: z.number().min(0).max(1).optional(),
@@ -105,7 +106,9 @@ export interface ModelCapabilities {
     thinking: boolean;
     minThinkingTokens?: number;
     maxThinkingTokens?: number;
-    createdAt?: string;
+    baseUrl?: string;
+    sdk: "anthropic" | "openai" | "gemini";
+    apiKeyName: `${string}_API_KEY`;
 }
 
 export interface GeminiInput extends Content { };
