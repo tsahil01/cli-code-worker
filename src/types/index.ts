@@ -1,6 +1,6 @@
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { Content } from "@google/genai";
-import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { ResponseInputItem } from "openai/resources/responses/responses";
 import { z } from "zod";
 
 export interface AnthropicFunctionCall {
@@ -115,4 +115,4 @@ export interface GeminiInput extends Content { };
 
 export interface AnthropicInput extends MessageParam { }
 
-export type OpenAIInput = ChatCompletionMessageParam;
+export type OpenAIInput = ResponseInputItem;
