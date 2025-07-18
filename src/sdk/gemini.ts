@@ -101,6 +101,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
         // Send final summary
         callback({
             type: 'final',
+            sdk: "gemini",
             finishReason,
             usageMetadata,
             summary: {
