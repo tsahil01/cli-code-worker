@@ -198,7 +198,6 @@ router.post("/stream", async (req, res) => {
                 res.end();
             }
         } else if (sdk === "openai") {
-            console.log("openai");
             let modelCapabilities;
             if (provider != "openai") {
                 modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
@@ -211,12 +210,17 @@ router.post("/stream", async (req, res) => {
                 return;
             }
             const msgs: ChatCompletionMessageParam[] = parsedMsgs.map((msg) => {
-                if (msg.role === "assistant" && msg.metadata?.toolCalls?.length) {
+                if (msg.role === "assistant" && msg.content.length > 0) {
                     return {
                         role: "assistant",
                         content: msg.content as string,
                     } as ChatCompletionMessageParam;
-                } else if (msg.role === "assistant" && !msg.metadata?.toolCalls?.length && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                } else if (msg.role === "assistant" && msg.content.length === 0 && msg.metadata?.toolCalls?.length) {
+                    return {
+                        role: "assistant",
+                        content: `Running tool with id: ${msg.metadata.toolCalls[0].id}`,
+                    } as ChatCompletionMessageParam;
+                } else if (msg.role === "assistant" && msg.content.length === 0 && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
                     return {
                         role: "assistant",
                         content: msg.metadata.thinkingContent,
@@ -224,7 +228,7 @@ router.post("/stream", async (req, res) => {
                 } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
                     return {
                         role: "user",
-                        content: msg.content as string,
+                        content: `Result of tool ${msg.metadata.toolCalls[0].id}: \n${msg.content}`,
                     } as ChatCompletionMessageParam;
                 } else {
                     return {
