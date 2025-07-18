@@ -188,14 +188,38 @@ export const geminiModels: ModelCapabilities[] = [{
     apiKeyName: "GEMINI_API_KEY",
 }];
 
-export const otherModels: ModelCapabilities[] = [{
+export const otherModels: ModelCapabilities[] = [
+    {
     modelName: "kimi-k2-0711-preview",
     provider: "moonshot",
-    displayName: "Kimi K2",
+    displayName: "Kimi K2 (Anthropic SDK)",
     maxInputTokens: 128000,
     maxOutputTokens: 8192,
     thinking: false,
     sdk: "anthropic",
     baseUrl: "https://api.moonshot.ai/anthropic/",
     apiKeyName: "MOONSHOT_API_KEY",
+},
+ {
+    modelName: "kimi-k2-0711-preview",
+    provider: "moonshot",
+    displayName: "Kimi K2 (OpenAI SDK)",
+    maxInputTokens: 128000,
+    maxOutputTokens: 8192,
+    thinking: false,
+    sdk: "openai",
+    baseUrl: "https://api.moonshot.ai/v1",
+    apiKeyName: "MOONSHOT_API_KEY",
+}, {
+    modelName: "google/gemini-2.5-pro",
+    provider: "openrouter",
+    displayName: "Gemini 2.5 Pro OR",
+    maxInputTokens: 128000,
+    maxOutputTokens: 8192,
+    thinking: true,
+    minThinkingTokens: 128,
+    maxThinkingTokens: 32768,
+    sdk: "openai",
+    baseUrl: "https://openrouter.ai/api/v1",
+    apiKeyName: "OPENROUTER_API_KEY",
 }];

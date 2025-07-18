@@ -38,7 +38,7 @@ router.post("/stream", async (req, res) => {
         if (sdk === "anthropic") {
             let modelCapabilities;
             if (provider != "anthropic") {
-                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider && m.sdk === "anthropic");
             } else {
                 modelCapabilities = anthropicModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
             }
@@ -127,7 +127,7 @@ router.post("/stream", async (req, res) => {
         } else if (sdk === "gemini") {
             let modelCapabilities;
             if (provider === "other") {
-                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider && m.sdk === "gemini");
             } else {
                 modelCapabilities = geminiModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
             }
@@ -200,7 +200,7 @@ router.post("/stream", async (req, res) => {
         } else if (sdk === "openai") {
             let modelCapabilities;
             if (provider != "openai") {
-                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider && m.sdk === "openai");
             } else {
                 modelCapabilities = openaiModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
             }
