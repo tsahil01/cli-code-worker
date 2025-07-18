@@ -196,6 +196,6 @@ export const otherModels: ModelCapabilities[] = [{
     maxOutputTokens: 8192,
     thinking: false,
     sdk: "anthropic",
-    baseUrl: "https://api.moonshot.ai/anthropic",
+    baseUrl: "https://api.moonshot.ai/anthropic/",
     apiKeyName: "MOONSHOT_API_KEY",
 }];

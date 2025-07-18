@@ -1,18 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { anthropicTools } from "../context/tools";
-import { anthropicAPIKey } from "..";
 import { type planSchema } from "../types";
 import { z } from "zod";
 import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
 import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
 import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 
-export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, apiKey: string, callback: (event: any) => void) {
+export async function anthropicChatStream(messages: MessageParam[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, apiKey: string, base_url: string | undefined, callback: (event: any) => void) {
     const addOns = addOnesConfig(plan);
 
     const anthropicClient = new Anthropic({
         apiKey: apiKey,
+        ...(base_url && { baseURL: base_url }),
     });
 
     try {

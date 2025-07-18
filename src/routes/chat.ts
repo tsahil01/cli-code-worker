@@ -35,7 +35,7 @@ router.post("/stream", async (req, res) => {
 
         if (sdk === "anthropic") {
             let modelCapabilities;
-            if (provider === "other") {
+            if (provider != "anthropic") {
                 modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
             } else {
                 modelCapabilities = anthropicModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
@@ -106,6 +106,7 @@ router.post("/stream", async (req, res) => {
                     modelCapabilities.thinking,
                     plan,
                     apiKey,
+                    modelCapabilities.baseUrl,
                     (event) => {
                         res.write(`${JSON.stringify(event)}\n`);
 
