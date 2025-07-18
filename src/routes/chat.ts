@@ -3,7 +3,9 @@ import { anthropicChatStream } from "../sdk/antropic";
 import { geminiChatStream } from "../sdk/gemini";
 import { AnthropicInput, chatValidation, GeminiInput, ModelCapabilities, OpenAIInput, planSchema, UserData } from "../types";
 import { verifyUser } from "../lib/auth";
-import { anthropicModels, geminiModels, otherModels } from "../lib/models";
+import { anthropicModels, geminiModels, openaiModels, otherModels } from "../lib/models";
+import { openAIChatCompletionStream } from "../sdk/openai";
+import { ChatCompletionMessageParam } from "openai/resources/index";
 
 const router = Router();
 
@@ -191,6 +193,65 @@ router.post("/stream", async (req, res) => {
                     }
                 );
 
+            } catch (error) {
+                res.write(`data: ${JSON.stringify({ error: "stream_error", details: error })}\n\n`);
+                res.end();
+            }
+        } else if (sdk === "openai") {
+            console.log("openai");
+            let modelCapabilities;
+            if (provider != "openai") {
+                modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+            } else {
+                modelCapabilities = openaiModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+            }
+            if (!modelCapabilities) {
+                res.write(`data: ${JSON.stringify({ error: "model_not_found", details: "Model not found" })}\n\n`);
+                res.end();
+                return;
+            }
+            const msgs: ChatCompletionMessageParam[] = parsedMsgs.map((msg) => {
+                if (msg.role === "assistant" && msg.metadata?.toolCalls?.length) {
+                    return {
+                        role: "assistant",
+                        content: msg.content as string,
+                    } as ChatCompletionMessageParam;
+                } else if (msg.role === "assistant" && !msg.metadata?.toolCalls?.length && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                    return {
+                        role: "assistant",
+                        content: msg.metadata.thinkingContent,
+                    } as ChatCompletionMessageParam;
+                } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
+                    return {
+                        role: "user",
+                        content: msg.content as string,
+                    } as ChatCompletionMessageParam;
+                } else {
+                    return {
+                        role: "user",
+                        content: msg.content as string,
+                    } as ChatCompletionMessageParam;
+                }
+            });
+
+            try {
+                await openAIChatCompletionStream(
+                    msgs,
+                    modelCapabilities.modelName,
+                    modelCapabilities.maxOutputTokens,
+                    modelCapabilities.thinking,
+                    plan,
+                    apiKey,
+                    modelCapabilities.baseUrl,
+                    (event) => {
+                        res.write(`${JSON.stringify(event)}\n`);
+
+                        if (event.type === 'final') {
+                            res.write(`{"type":"done"}\n`);
+                            res.end();
+                        }
+                    }
+                );
             } catch (error) {
                 res.write(`data: ${JSON.stringify({ error: "stream_error", details: error })}\n\n`);
                 res.end();
