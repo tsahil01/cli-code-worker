@@ -77,6 +77,7 @@ export async function anthropicChatStream(messages: MessageParam[], model: strin
 
         callback({
             type: 'final',
+            sdk: "anthropic",
             finishReason,
             usageMetadata,
             fullMessage,
