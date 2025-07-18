@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { anthropicChatStream } from "../proviers/antropic";
-import { geminiChatStream } from "../proviers/gemini";
+import { anthropicChatStream } from "../sdk/antropic";
+import { geminiChatStream } from "../sdk/gemini";
 import { AnthropicInput, chatValidation, GeminiInput, ModelCapabilities, OpenAIInput, planSchema, UserData } from "../types";
 import { verifyUser } from "../lib/auth";
 import { anthropicModels, geminiModels, otherModels } from "../lib/models";
