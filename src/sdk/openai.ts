@@ -119,7 +119,9 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
             tools: openaiTools,
             tool_choice: 'auto',
             stream: true,
-            ...(thinking && { reasoning: { type: "enabled", effort: "medium" } as Reasoning }),
+            ...(thinking && { reasoning_effort: "medium" }),
+            stream_options: { include_usage: true },
+            ...(base_url == "https://api.moonshot.ai/v1" && { enable_context_caching: true }) // kimi k2 cache
         });
 
         let thinkingBlocks: any[] = [];
@@ -128,6 +130,7 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
         let finishReason: string | null = null;
         let usageMetadata: any = null;
 
+        // @ts-ignore
         for await (const chunk of stream) {
             if (chunk.choices && chunk.choices.length > 0) {
                 const choice = chunk.choices[0];
@@ -151,8 +154,6 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
                 }
 
                 if (choice.delta?.tool_calls) {
-                    console.log("tool_calls", JSON.stringify(choice.delta, null, 2));
-                    
                     for (const toolCall of choice.delta.tool_calls) {
                         const index = toolCall.index;
                         
@@ -190,6 +191,10 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
                     usageMetadata = chunk.usage;
                 }
             }
+
+            if (chunk.usage) {
+                usageMetadata = chunk.usage;
+              }
         }
 
         const finalToolCalls = Array.from(toolCallsMap.values());
