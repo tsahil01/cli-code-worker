@@ -1,6 +1,6 @@
 import { ToolUnion } from "@anthropic-ai/sdk/resources/messages";
 import { FunctionDeclaration, Type } from "@google/genai";
-import { FunctionTool, Tool } from "openai/resources/responses/responses";
+import { ChatCompletionTool } from "openai/resources/index";
 
 export const anthropicTools: ToolUnion[] = [{
     name: "run_command",
@@ -251,7 +251,7 @@ export const anthropicTools: ToolUnion[] = [{
                     properties: {
                         originalContent: {
                             type: "string",
-                                description: "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
+                            description: "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
                         },
                         proposedContent: {
                             type: "string",
@@ -594,343 +594,407 @@ export const geminiTools: FunctionDeclaration[] = [{
     }
 }];
 
-export const openaiTools: Tool[] = [{
+export const openaiTools: ChatCompletionTool[] = [{
     type: "function",
-    name: "run_command",
-    description: "Executes a command in the terminal",
-    parameters: {
-        type: "object",
-        properties: {
-            command: {
-                type: "string",
-                description: "The command to execute"
-            }
-        },
-        required: ["command"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "run_background_command",
-    description: "Run long running process/command. This command will run in the background and return a process ID.",
-    parameters: {
-        type: "object",
-        properties: {
-            command: {
-                type: "string",
-                description: "The command to run in background"
-            },
-            processId: {
-                type: "string",
-                description: "Unique identifier for the background process"
-            }
-        },
-        required: ["command", "processId"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "stop_process",
-    description: "Stop a background process.",
-    parameters: {
-        type: "object",
-        properties: {
-            processId: {
-                type: "string",
-                description: "The process ID to stop"
-            }
-        },
-        required: ["processId"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "is_process_running",
-    description: "Check if a process is running.",
-    parameters: {
-        type: "object",
-        properties: {
-            processId: {
-                type: "string",
-                description: "The process ID to check"
-            }
-        },
-        required: ["processId"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "check_current_directory",
-    description: "Get the current directory.",
-    parameters: {
-        type: "object",
-        properties: {},
-        required: []
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "list_files",
-    description: "List files in the directory path. Path is relative to the current directory.",
-    parameters: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "The directory path to list files from"
-            }
-        },
-        required: ["filePath"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "read_file",
-    description: "Read a file's content by providing the file path. Path is relative to the current directory.",
-    parameters: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "The file path to read"
-            }
-        },
-        required: ["filePath"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "write_file",
-    description: "Write content to a file. Path is relative to the current directory.",
-    parameters: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "The file path to write to"
-            },
-            content: {
-                type: "string",
-                description: "The content to write to the file"
-            }
-        },
-        required: ["filePath", "content"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "open_file",
-    description: "Open a file with the default application. Path is relative to the current directory.",
-    parameters: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "The file path to open"
-            }
-        },
-        required: ["filePath"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "open_browser",
-    description: "Open a URL in the browser.",
-    parameters: {
-        type: "object",
-        properties: {
-            url: {
-                type: "string",
-                description: "The URL to open in the browser"
-            }
-        },
-        required: ["url"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "grep_search",
-    description: "Search for a term in files like 'grep -r 'searchTerm' filePath'.",
-    parameters: {
-        type: "object",
-        properties: {
-            searchTerm: {
-                type: "string",
-                description: "The term to search for"
-            },
-            filePath: {
-                type: "string",
-                description: "The file or directory path to search in"
-            }
-        },
-        required: ["searchTerm", "filePath"]
-    },
-    strict: true,
-}, {
-    type: "function",
-    name: "open_file_vscode",
-    description: "Opens a file in the VSCode editor.",
-    parameters: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "Path to the file to open"
-            },
-            options: {
-                type: "object",
-                description: "VSCode text editor options",
-                properties: {
-                    viewColumn: {
-                        type: "number",
-                        description: "The view column to open the document in"
-                    },
-                    preserveFocus: {
-                        type: "boolean",
-                        description: "Whether to preserve focus on the current editor"
-                    },
-                    preview: {
-                        type: "boolean",
-                        description: "Whether to open the document in preview mode"
-                    }
+    function: {
+        name: "run_command",
+        description: "Executes a command in the terminal",
+        parameters: {
+            type: "object",
+            properties: {
+                command: {
+                    type: "string",
+                    description: "The command to execute"
                 }
-            }
+            },
+            required: ["command"],
+            additionalProperties: false
         },
-        required: ["filePath"]
-    },
-    strict: true,
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "delete_file",
-    description: "Deletes a file from the system.",
-    parameters: {
-        type: "object",
-        properties: {
-            filePath: {
-                type: "string",
-                description: "Path to the file to delete"
-            }
+    function: {
+        name: "run_background_command",
+        description: "Run long running process/command. This command will run in the background and return a process ID.",
+        parameters: {
+            type: "object",
+            properties: {
+                command: {
+                    type: "string",
+                    description: "The command to run in background"
+                },
+                processId: {
+                    type: "string",
+                    description: "Unique identifier for the background process"
+                }
+            },
+            required: ["command", "processId"],
+            additionalProperties: false
         },
-        required: ["filePath"]
-    },
-    strict: true,
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "select_text",
-    description: "Selects text in the active editor in VSCode.",
-    parameters: {
-        type: "object",
-        properties: {
-            startLine: {
-                type: "number",
-                description: "Starting line number (1-based)"
+    function: {
+        name: "stop_process",
+        description: "Stop a background process.",
+        parameters: {
+            type: "object",
+            properties: {
+                processId: {
+                    type: "string",
+                    description: "The process ID to stop"
+                }
             },
-            startChar: {
-                type: "number",
-                description: "Starting character position (0-based)"
-            },
-            endLine: {
-                type: "number",
-                description: "Ending line number (1-based)"
-            },
-            endChar: {
-                type: "number",
-                description: "Ending character position (0-based)"
-            }
+            required: ["processId"],
+            additionalProperties: false
         },
-        required: ["startLine", "startChar", "endLine", "endChar"]
-    },
-    strict: true,
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "propose_change_vscode",
-    description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace. Path is absolute.",
-    parameters: {
-        type: "object",
-        properties: {
-            title: {
-                type: "string",
-                description: "Title of the change proposal (shown in diff dialog)"
+    function: {
+        name: "is_process_running",
+        description: "Check if a process is running.",
+        parameters: {
+            type: "object",
+            properties: {
+                processId: {
+                    type: "string",
+                    description: "The process ID to check"
+                }
             },
-            filePath: {
-                type: "string",
-                description: "Path to the file to be modified. Path is absolute."
+            required: ["processId"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "check_current_directory",
+        description: "Get the current directory.",
+        parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "list_files",
+        description: "List files in the directory path. Path is relative to the current directory.",
+        parameters: {
+            type: "object",
+            properties: {
+                filePath: {
+                    type: "string",
+                    description: "The directory path to list files from"
+                }
             },
-            changes: {
-                type: "array",
-                description: "Array of content-based changes to apply",
-                items: {
+            required: ["filePath"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "read_file",
+        description: "Read a file's content by providing the file path. Path is relative to the current directory.",
+        parameters: {
+            type: "object",
+            properties: {
+                filePath: {
+                    type: "string",
+                    description: "The file path to read"
+                }
+            },
+            required: ["filePath"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "write_file",
+        description: "Write content to a file. Path is relative to the current directory.",
+        parameters: {
+            type: "object",
+            properties: {
+                filePath: {
+                    type: "string",
+                    description: "The file path to write to"
+                },
+                content: {
+                    type: "string",
+                    description: "The content to write to the file"
+                }
+            },
+            required: ["filePath", "content"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "open_file",
+        description: "Open a file with the default application. Path is relative to the current directory.",
+        parameters: {
+            type: "object",
+            properties: {
+                filePath: {
+                    type: "string",
+                    description: "The file path to open"
+                }
+            },
+            required: ["filePath"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "open_browser",
+        description: "Open a URL in the browser.",
+        parameters: {
+            type: "object",
+            properties: {
+                url: {
+                    type: "string",
+                    description: "The URL to open in the browser"
+                }
+            },
+            required: ["url"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "grep_search",
+        description: "Search for a term in files like 'grep -r 'searchTerm' filePath'.",
+        parameters: {
+            type: "object",
+            properties: {
+                searchTerm: {
+                    type: "string",
+                    description: "The term to search for"
+                },
+                filePath: {
+                    type: "string",
+                    description: "The file or directory path to search in"
+                }
+            },
+            required: ["searchTerm", "filePath"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "open_file_vscode",
+        description: "Opens a file in the VSCode editor.",
+        parameters: {
+            type: "object",
+            properties: {
+                filePath: {
+                    type: "string",
+                    description: "Path to the file to open"
+                },
+                options: {
                     type: "object",
+                    description: "VSCode text editor options",
                     properties: {
-                        originalContent: {
-                            type: "string",
-                            description: "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
+                        viewColumn: {
+                            type: "number",
+                            description: "The view column to open the document in"
                         },
-                        proposedContent: {
-                            type: "string",
-                            description: "New content to replace the original content with"
+                        preserveFocus: {
+                            type: "boolean",
+                            description: "Whether to preserve focus on the current editor"
                         },
-                        description: {
-                            type: "string",
-                            description: "Optional description of this specific change"
+                        preview: {
+                            type: "boolean",
+                            description: "Whether to open the document in preview mode"
                         }
                     },
-                    required: ["originalContent", "proposedContent"]
-                },
-                minItems: 1
-            }
+                    required: ["viewColumn", "preserveFocus", "preview"],
+                    additionalProperties: false
+                }
+            },
+            required: ["filePath", "options"],
+            additionalProperties: false
         },
-        required: ["title", "filePath", "changes"]
-    },
-    strict: true,
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "get_active_file",
-    description: "Gets information about the currently active file in the editor.",
-    parameters: {
-        type: "object",
-        properties: {},
-        required: []
-    },
-    strict: true,
+    function: {
+        name: "delete_file",
+        description: "Deletes a file from the system.",
+        parameters: {
+            type: "object",
+            properties: {
+                filePath: {
+                    type: "string",
+                    description: "Path to the file to delete"
+                }
+            },
+            required: ["filePath"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "get_open_tabs",
-    description: "Gets information about all open tabs in the editor.",
-    parameters: {
-        type: "object",
-        properties: {},
-        required: []
-    },
-    strict: true,
+    function: {
+        name: "select_text",
+        description: "Selects text in the active editor in VSCode.",
+        parameters: {
+            type: "object",
+            properties: {
+                startLine: {
+                    type: "number",
+                    description: "Starting line number (1-based)"
+                },
+                startChar: {
+                    type: "number",
+                    description: "Starting character position (0-based)"
+                },
+                endLine: {
+                    type: "number",
+                    description: "Ending line number (1-based)"
+                },
+                endChar: {
+                    type: "number",
+                    description: "Ending character position (0-based)"
+                }
+            },
+            required: ["startLine", "startChar", "endLine", "endChar"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "get_text_selection",
-    description: "Gets information about the current text selection in the active editor.",
-    parameters: {
-        type: "object",
-        properties: {},
-        required: []
-    },
-    strict: true,
+    function: {
+        name: "propose_change_vscode",
+        description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace. Path is absolute.",
+        parameters: {
+            type: "object",
+            properties: {
+                title: {
+                    type: "string",
+                    description: "Title of the change proposal (shown in diff dialog)"
+                },
+                filePath: {
+                    type: "string",
+                    description: "Path to the file to be modified. Path is absolute."
+                },
+                changes: {
+                    type: "array",
+                    description: "Array of content-based changes to apply",
+                    items: {
+                        type: "object",
+                        properties: {
+                            originalContent: {
+                                type: "string",
+                                description: "Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."
+                            },
+                            proposedContent: {
+                                type: "string",
+                                description: "New content to replace the original content with"
+                            },
+                            description: {
+                                type: "string",
+                                optional: true,
+                                description: "Optional description of this specific change"
+                            }
+                        },
+                        required: ["originalContent", "proposedContent", "description"],
+                        additionalProperties: false
+                    },
+                    minItems: 1
+                }
+            },
+            required: ["title", "filePath", "changes"],
+            additionalProperties: false
+        },
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "get_diffs",
-    description: "Gets information about latest changes in the workspace.",
-    parameters: {
-        type: "object",
-        properties: {},
-        required: []
-    },
-    strict: true,
+    function: {
+        name: "get_active_file",
+        description: "Gets information about the currently active file in the editor.",
+        parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false
+        },
+        strict: true,
+    }
 }, {
     type: "function",
-    name: "get_diagnostics",
-    description: "Gets diagnostic information (errors, warnings, etc.) for files in the workspace.",
-    parameters: {
-        type: "object",
-        properties: {},
-        required: []
-    },
-    strict: true,
+    function: {
+        name: "get_open_tabs",
+        description: "Gets information about all open tabs in the editor.",
+        parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "get_text_selection",
+        description: "Gets information about the current text selection in the active editor.",
+        parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "get_diffs",
+        description: "Gets information about latest changes in the workspace.",
+        parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false
+        },
+        strict: true,
+    }
+}, {
+    type: "function",
+    function: {
+        name: "get_diagnostics",
+        description: "Gets diagnostic information (errors, warnings, etc.) for files in the workspace.",
+        parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false
+        },
+        strict: true,
+    }
 }]
