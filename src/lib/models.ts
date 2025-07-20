@@ -112,17 +112,6 @@ export const openaiModels: ModelCapabilities[] = [{
     sdk: "openai",
     apiKeyName: "OPENAI_API_KEY",
 }, {
-    modelName: "o3-pro", // does not support /chat/completions endpoint
-    provider: "openai",
-    displayName: "OpenAI o3-pro",
-    maxInputTokens: 200000,
-    maxOutputTokens: 100000,
-    thinking: true,
-    minThinkingTokens: 1024,
-    maxThinkingTokens: 32000,
-    sdk: "openai",
-    apiKeyName: "OPENAI_API_KEY",
-}, {
     modelName: "o3-mini",
     provider: "openai",
     displayName: "OpenAI o3-mini",
