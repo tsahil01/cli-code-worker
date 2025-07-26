@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import { Message, MessageDeltaUsage, MessageParam, StopReason, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages";
 import { anthropicTools } from "../context/tools";
-import { type planSchema } from "../types";
+import { ResponseUsageMetadata, type planSchema } from "../types";
 import { z } from "zod";
 import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
 import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
@@ -38,15 +38,23 @@ export async function anthropicChatStream(messages: MessageParam[], model: strin
 
         let thinkingBlocks: any[] = [];
         let regularContent: any[] = [];
-        let toolCalls: any[] = [];
-        let finishReason: string | null = null;
-        let usageMetadata: any = null;
-        let fullMessage: any = null;
+        let toolCalls: ToolUseBlock[] = [];
+        let finishReason: StopReason | null = null;
+        let usageMetadata: ResponseUsageMetadata | null = null;
+        let fullMessage: Message | null = null;
 
         stream.on('message', (message) => {
             fullMessage = message;
             finishReason = message.stop_reason;
-            usageMetadata = message.usage;
+            const usage = message.usage as MessageDeltaUsage | undefined;
+            if (usage) {
+                usageMetadata = {
+                    inputTokens: usage.input_tokens || 0,
+                    outputTokens: usage.output_tokens || 0,
+                    cacheInputTokens: usage.cache_creation_input_tokens || 0,
+                    cacheReadTokens: usage.cache_read_input_tokens || 0,
+                };
+            }
         });
 
         stream.on('contentBlock', (contentBlock) => {

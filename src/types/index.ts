@@ -116,3 +116,10 @@ export interface GeminiInput extends Content { };
 export interface AnthropicInput extends MessageParam { }
 
 export type OpenAIInput = ResponseInputItem;
+
+export interface ResponseUsageMetadata {
+    cacheInputTokens: number;
+    inputTokens: number;
+    cacheReadTokens: number;
+    outputTokens: number;
+}
