@@ -1,13 +1,12 @@
 import { GoogleGenAI, Content, Part } from "@google/genai";
 import { geminiTools } from "../context/tools";
 import { geminiAPIKey } from "../index";
-import { planSchema } from "../types";
+import { planSchema, ResponseUsageMetadata } from "../types";
 import { z } from "zod";
 import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 import { LITE_SYSTEM_PROMPT } from "../context/prompts/lite/prompts";
 import { SYSTEM_PROMPT } from "../context/prompts/full/prompts";
 
-// Function to map roles to Gemini-compatible roles
 function mapToGeminiRole(role: string): string {
     switch (role) {
         case 'assistant':
@@ -19,10 +18,9 @@ function mapToGeminiRole(role: string): string {
     }
 }
 
-
 export async function geminiChatStream(messages: Content[], model: string, max_tokens: number, thinking: boolean, plan: z.infer<typeof planSchema>, apiKey: string, callback: (event: any) => void) {
     const geminiClient = new GoogleGenAI({ apiKey: apiKey });
-    const addOns = addOnesConfig(plan); 
+    const addOns = addOnesConfig(plan);
     try {
         // Map roles to Gemini-compatible roles
         const mappedMessages = messages.map(msg => ({
@@ -34,7 +32,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
             model,
             contents: mappedMessages,
             config: {
-                systemInstruction: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) :  SYSTEM_PROMPT,
+                systemInstruction: plan.mode === "lite" ? LITE_SYSTEM_PROMPT(addOns) : SYSTEM_PROMPT,
                 maxOutputTokens: max_tokens,
                 temperature: 0.7,
                 ...(thinking && {
@@ -43,7 +41,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
                         includeThoughts: true,
                     },
                 }),
-                tools:[{
+                tools: [{
                     functionDeclarations: geminiTools
                 }]
             },
@@ -53,7 +51,7 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
         let regularContent: any[] = [];
         let toolCalls: any[] = [];
         let finishReason: string | null = null;
-        let usageMetadata: any = null;
+        let usageMetadata: ResponseUsageMetadata | null = null;
 
         // Process stream chunks
         for await (const chunk of stream) {
@@ -94,7 +92,15 @@ export async function geminiChatStream(messages: Content[], model: string, max_t
                 finishReason = candidate.finishReason;
             }
             if (chunk.usageMetadata) {
-                usageMetadata = chunk.usageMetadata;
+                let usage = chunk.usageMetadata;
+                if (usage) {
+                    usageMetadata = {
+                        cacheInputTokens: usage.cachedContentTokenCount ?? 0,
+                        inputTokens: usage.promptTokenCount ?? 0,
+                        cacheReadTokens: usage.cachedContentTokenCount ?? 0, // Adjust if you're summing `cacheTokensDetails`
+                        outputTokens: usage.candidatesTokenCount ?? 0
+                    }
+                }
             }
         }
 

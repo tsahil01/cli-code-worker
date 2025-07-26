@@ -1,4 +1,4 @@
-import { planSchema } from "../types";
+import { planSchema, ResponseUsageMetadata } from "../types";
 import { z } from "zod";
 import { addOnesConfig } from "../context/prompts/lite/add-ons/add-ons-configure";
 import OpenAI from "openai";
@@ -128,7 +128,7 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
         let regularContent: any[] = [];
         let toolCallsMap: Map<number, any> = new Map();
         let finishReason: string | null = null;
-        let usageMetadata: any = null;
+        let usageMetadata: ResponseUsageMetadata | null = null;
 
         // @ts-ignore
         for await (const chunk of stream) {
@@ -156,7 +156,7 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
                 if (choice.delta?.tool_calls) {
                     for (const toolCall of choice.delta.tool_calls) {
                         const index = toolCall.index;
-                        
+
                         if (!toolCallsMap.has(index)) {
                             toolCallsMap.set(index, {
                                 index: index,
@@ -179,7 +179,7 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
                             existingCall.id = toolCall.id;
                         }
                     }
-                    
+
                     callback({
                         type: "tool_call",
                         toolCall: choice.delta,
@@ -188,13 +188,30 @@ export async function openAIChatCompletionStream(messages: ChatCompletionMessage
 
                 if (choice.finish_reason) {
                     finishReason = choice.finish_reason;
-                    usageMetadata = chunk.usage;
+                    const usage = chunk.usage;
+                    if (usage) {
+                        usageMetadata = {
+                            cacheInputTokens: 0,
+                            inputTokens: usage.prompt_tokens || 0,
+                            cacheReadTokens: 0,
+                            outputTokens: usage.completion_tokens || 0
+                        };
+                    }
                 }
+
             }
 
             if (chunk.usage) {
-                usageMetadata = chunk.usage;
-              }
+                const usage = chunk.usage;
+                if (usage) {
+                    usageMetadata = {
+                        cacheInputTokens: 0,
+                        inputTokens: usage.prompt_tokens || 0,
+                        cacheReadTokens: 0,
+                        outputTokens: usage.completion_tokens || 0
+                    };
+                }
+            }
         }
 
         const finalToolCalls = Array.from(toolCallsMap.values());
