@@ -1,0 +1,285 @@
+import { NextRequest } from 'next/server';
+import { anthropicChatStream } from '@/sdk/antropic';
+import { geminiChatStream } from '@/sdk/gemini';
+import { AnthropicInput, chatValidation, GeminiInput, ModelCapabilities } from '@/types';
+import { verifyUser } from '@/lib/auth';
+import { anthropicModels, geminiModels, openaiModels, otherModels } from '@/lib/models';
+import { openAIChatCompletionStream } from '@/sdk/openai';
+import { ChatCompletionMessageParam } from 'openai/resources/index';
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const zodValidation = chatValidation.safeParse(body);
+        console.log(zodValidation);
+
+        if (!zodValidation.success) {
+            return new Response(
+                JSON.stringify({ error: "zod_validation_error", details: zodValidation.error.message }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        const { chat } = zodValidation.data;
+        const { messages, sdk, model, temperature, plan, apiKey, provider } = chat;
+
+        const userData = await verifyUser(request);
+        let parsedMsgs = messages.filter(msg => !msg.ignoreInLLM);
+
+        if (!userData) {
+            return new Response(
+                JSON.stringify({ error: "unauthorized" }),
+                { status: 401, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Create a ReadableStream for streaming
+        const stream = new ReadableStream({
+            async start(controller) {
+                const encoder = new TextEncoder();
+
+                const sendEvent = (data: any) => {
+                    const chunk = encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+                    controller.enqueue(chunk);
+                };
+
+                const sendError = (error: any) => {
+                    const chunk = encoder.encode(`data: ${JSON.stringify({ error: "stream_error", details: error })}\n\n`);
+                    controller.enqueue(chunk);
+                    controller.close();
+                };
+
+                const sendDone = () => {
+                    const chunk = encoder.encode(`{"type":"done"}\n`);
+                    controller.enqueue(chunk);
+                    controller.close();
+                };
+
+                try {
+                    if (sdk === "anthropic") {
+                        let modelCapabilities;
+                        if (provider != "anthropic") {
+                            modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider && m.sdk === "anthropic");
+                        } else {
+                            modelCapabilities = anthropicModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+                        }
+                        if (!modelCapabilities) {
+                            sendEvent({ error: "model_not_found", details: "Model not found" });
+                            return;
+                        }
+                        const msgs: AnthropicInput[] = parsedMsgs.map((msg) => {
+                            if (msg.role === "assistant") {
+                                const blocks: any[] = [];
+
+                                if (modelCapabilities?.thinking && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                                    blocks.push({
+                                        type: "thinking",
+                                        thinking: msg.metadata?.thinkingContent || "",
+                                        signature: msg.metadata?.thinkingSignature || "",
+                                    });
+                                }
+
+                                if (msg.content && typeof msg.content === "string" && msg.content.trim().length > 0) {
+                                    blocks.push({
+                                        type: "text",
+                                        text: msg.content,
+                                    });
+                                }
+                                if (msg.metadata?.toolCalls?.length) {
+                                    blocks.push(
+                                        ...msg.metadata.toolCalls.map((toolCall) => ({
+                                            type: "tool_use",
+                                            id: toolCall.id,
+                                            name: toolCall.name,
+                                            input: toolCall.input,
+                                        }))
+                                    );
+                                }
+
+                                return {
+                                    role: "assistant",
+                                    content: blocks,
+                                } as AnthropicInput;
+                            } else {
+                                if (msg.metadata?.toolCalls?.length) {
+                                    return {
+                                        role: "user",
+                                        content: [
+                                            {
+                                                type: "tool_result",
+                                                tool_use_id: msg.metadata.toolCalls[0].id,
+                                                content: msg.content as string,
+                                            },
+                                        ],
+                                    } as AnthropicInput;
+                                }
+                                return {
+                                    role: "user",
+                                    content: msg.content as string,
+                                } as AnthropicInput;
+                            }
+                        });
+
+                        await anthropicChatStream(
+                            msgs,
+                            modelCapabilities.modelName,
+                            modelCapabilities.maxOutputTokens,
+                            modelCapabilities.thinking,
+                            plan,
+                            apiKey,
+                            modelCapabilities.baseUrl,
+                            (event) => {
+                                sendEvent(event);
+                                if (event.type === 'final') {
+                                    sendDone();
+                                }
+                            }
+                        );
+
+                    } else if (sdk === "gemini") {
+                        let modelCapabilities;
+                        if (provider === "other") {
+                            modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider && m.sdk === "gemini");
+                        } else {
+                            modelCapabilities = geminiModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+                        }
+                        if (!modelCapabilities) {
+                            sendEvent({ error: "model_not_found", details: "Model not found" });
+                            return;
+                        }
+                        const msgs: GeminiInput[] = parsedMsgs.map((msg) => {
+                            if (msg.role === "assistant" && msg.metadata?.toolCalls?.length) {
+                                return {
+                                    role: "assistant",
+                                    parts: [{
+                                        functionCall: {
+                                            name: msg.metadata.toolCalls[0].name,
+                                            args: msg.metadata.toolCalls[0].input,
+                                        }
+                                    }],
+                                    thoughtSignature: msg.metadata?.thinkingSignature || "",
+                                } as GeminiInput;
+                            } else if (msg.role === "assistant" && !msg.metadata?.toolCalls?.length && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                                return {
+                                    role: "assistant",
+                                    parts: [{
+                                        text: msg.metadata.thinkingContent,
+                                    }],
+                                    thoughtSignature: msg.metadata?.thinkingSignature || "",
+                                } as GeminiInput;
+                            } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
+                                return {
+                                    role: "user",
+                                    parts: [{
+                                        functionResponse: {
+                                            name: msg.metadata.toolCalls[0].name,
+                                            response: { data: (msg.content as string) },
+                                        }
+                                    }],
+                                    thoughtSignature: msg.metadata?.thinkingSignature || "",
+                                } as GeminiInput;
+                            } else {
+                                return {
+                                    role: "user",
+                                    parts: [{ text: msg.content }],
+                                } as GeminiInput;
+                            }
+                        });
+
+                        await geminiChatStream(
+                            msgs,
+                            modelCapabilities.modelName,
+                            modelCapabilities.maxOutputTokens,
+                            modelCapabilities.thinking,
+                            plan,
+                            apiKey,
+                            (event) => {
+                                sendEvent(event);
+                                if (event.type === 'final') {
+                                    sendDone();
+                                }
+                            }
+                        );
+
+                    } else if (sdk === "openai") {
+                        let modelCapabilities;
+                        if (provider != "openai") {
+                            modelCapabilities = otherModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider && m.sdk === "openai");
+                        } else {
+                            modelCapabilities = openaiModels.find((m: ModelCapabilities) => m.modelName === model && m.provider === provider);
+                        }
+                        if (!modelCapabilities) {
+                            sendEvent({ error: "model_not_found", details: "Model not found" });
+                            return;
+                        }
+                        const msgs: ChatCompletionMessageParam[] = parsedMsgs.map((msg) => {
+                            if (msg.role === "assistant" && msg.content.length > 0) {
+                                return {
+                                    role: "assistant",
+                                    content: msg.content as string,
+                                } as ChatCompletionMessageParam;
+                            } else if (msg.role === "assistant" && msg.content.length === 0 && msg.metadata?.toolCalls?.length) {
+                                return {
+                                    role: "assistant",
+                                    content: `Running tool with id: ${msg.metadata.toolCalls[0].id}`,
+                                } as ChatCompletionMessageParam;
+                            } else if (msg.role === "assistant" && msg.content.length === 0 && msg.metadata?.thinkingContent && msg.metadata?.thinkingContent.trim().length > 0) {
+                                return {
+                                    role: "assistant",
+                                    content: msg.metadata.thinkingContent,
+                                } as ChatCompletionMessageParam;
+                            } else if (msg.role === "user" && msg.metadata?.toolCalls?.length) {
+                                return {
+                                    role: "user",
+                                    content: `Result of tool ${msg.metadata.toolCalls[0].id}: \n${msg.content}`,
+                                } as ChatCompletionMessageParam;
+                            } else {
+                                return {
+                                    role: "user",
+                                    content: msg.content as string,
+                                } as ChatCompletionMessageParam;
+                            }
+                        });
+
+                        await openAIChatCompletionStream(
+                            msgs,
+                            modelCapabilities.modelName,
+                            modelCapabilities.maxOutputTokens,
+                            modelCapabilities.thinking,
+                            plan,
+                            apiKey,
+                            modelCapabilities.baseUrl,
+                            (event) => {
+                                sendEvent(event);
+                                if (event.type === 'final') {
+                                    sendDone();
+                                }
+                            }
+                        );
+                    } else {
+                        sendEvent({ error: "provider_not_supported", details: "Provider not supported" });
+                    }
+                } catch (error) {
+                    sendError(error);
+                }
+            }
+        });
+
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Cache-Control'
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in /chat/stream endpoint:", error);
+        return new Response(
+            JSON.stringify({ error: "internal_server_error", details: error }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+} 
