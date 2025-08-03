@@ -1,6 +1,8 @@
 import { ToolUnion } from "@anthropic-ai/sdk/resources/messages";
 import { FunctionDeclaration, Type } from "@google/genai";
 import { ChatCompletionTool } from "openai/resources/index";
+import { Tool, ToolSet } from "ai";
+import z from "zod";
 
 export const anthropicTools: ToolUnion[] = [{
     name: "run_command",
@@ -998,3 +1000,126 @@ export const openaiTools: ChatCompletionTool[] = [{
         strict: true,
     }
 }]
+
+export const aisdkTools: ToolSet = {
+    run_command: {
+        description: "Executes a command in the terminal",
+        inputSchema: z.object({
+            command: z.string().describe("The command to execute")
+        }),
+    },
+    run_background_command: {
+        description: "Run long running process/command like 'npm run dev'. This command will run in the background and return a process ID.",
+        inputSchema: z.object({
+            command: z.string().describe("The command to run in background"),
+            processId: z.string().describe("Unique identifier for the background process")
+        }),
+    },
+    stop_process: {
+        description: "Stop a background process.",
+        inputSchema: z.object({
+            processId: z.string().describe("The process ID to stop")
+        }),
+    },
+    is_process_running: {
+        description: "Check if a process is running.",
+        inputSchema: z.object({
+            processId: z.string().describe("The process ID to check")
+        }),
+    },
+    check_current_directory: {
+        description: "Get the current directory.",
+        inputSchema: z.object({}),
+    },
+    list_files: {
+        description: "List files in the directory path. Path is relative to the current directory.",
+        inputSchema: z.object({
+            filePath: z.string().describe("The directory path to list files from")
+        }),
+    },
+    read_file: {
+        description: "Read a file's content by providing the file path. Path is relative to the current directory.",
+        inputSchema: z.object({
+            filePath: z.string().describe("The file path to read")
+        }),
+    },
+    write_file: {
+        description: "Write content to a file. Path is relative to the current directory.",
+        inputSchema: z.object({
+            filePath: z.string().describe("The file path to write to"),
+            content: z.string().describe("The content to write to the file")
+        }),
+    },
+    open_file: {
+        description: "Open a file with the default application. Path is relative to the current directory.",
+        inputSchema: z.object({
+            filePath: z.string().describe("The file path to open")
+        }),
+    },
+    open_browser: {
+        description: "Open a URL in the browser.",
+        inputSchema: z.object({
+            url: z.string().describe("The URL to open in the browser")
+        }),
+    },
+    grep_search: {
+        description: "Search for a term in files like 'grep -r 'searchTerm' filePath'.",
+        inputSchema: z.object({
+            searchTerm: z.string().describe("The term to search for"),
+            filePath: z.string().describe("The file or directory path to search in")
+        }),
+    },
+    open_file_vscode: {
+        description: "Opens a file in the VSCode editor.",
+        inputSchema: z.object({
+            filePath: z.string().describe("Path to the file to open")
+        }),
+    },
+    delete_file: {
+        description: "Deletes a file from the system.",
+        inputSchema: z.object({
+            filePath: z.string().describe("Path to the file to delete")
+        }),
+    },
+    select_text: {
+        description: "Selects text in the active editor in VSCode.",
+        inputSchema: z.object({
+            startLine: z.number().describe("Starting line number (1-based)"),
+            startChar: z.number().describe("Starting character position (0-based)"),
+            endLine: z.number().describe("Ending line number (1-based)"),
+            endChar: z.number().describe("Ending character position (0-based)")
+        }),
+    },
+    propose_change_vscode: {
+        description: "Proposes a code change with inline diff preview in VSCode. Uses pure content-based matching - simply provide the exact text to find and replace. Path is absolute.",
+        inputSchema: z.object({
+            title: z.string().describe("Title of the change proposal (shown in diff dialog)"),
+            filePath: z.string().describe("Path to the file to be modified. Path is absolute."),
+            changes: z.array(z.object({
+                originalContent: z.string().describe("Exact text content to find and replace. Include enough context to make it unique if the same text appears multiple times."),
+                proposedContent: z.string().describe("New content to replace the original content with"),
+                description: z.string().describe("Optional description of this specific change")
+            })).describe("Array of content-based changes to apply")
+        }),
+    },
+    get_active_file: {
+        description: "Gets information about the currently active file in the editor.",
+        inputSchema: z.object({}),
+    },
+    get_open_tabs: {
+        description: "Gets information about all open tabs in the editor.",
+        inputSchema: z.object({}),
+    },
+    get_text_selection: {
+        description: "Gets information about the current text selection in the active editor.",
+        inputSchema: z.object({}),
+    },
+    get_diffs: {
+        description: "Gets information about latest changes in the workspace.",
+        inputSchema: z.object({}),
+    },
+    get_diagnostics: {
+        description: "Gets diagnostic information (errors, warnings, etc.) for files in the workspace.",
+        inputSchema: z.object({}),
+    }
+}
